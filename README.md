@@ -2,6 +2,21 @@
 
 A JUCE-based VST/AU plugin that generates 24 pulses per quarter note and stays synchronized with tempo changes.
 
+## Inspiration
+
+This plugin was inspired by a Facebook post in the **Synthesizer Zone** group by **Zac Caruso**, who asked:
+> "Anyone know of a plugin that can do 24 pulses per quarter note and stay in time with tempo changes? I'd actually pay someone to"
+
+This request highlighted a specific need in the music production community for precise rhythmic pulse generation that can adapt to tempo changes in real-time.
+
+## Use Cases
+
+- **Rhythmic Modulation**: Create complex rhythmic patterns for synthesizer modulation
+- **Clock Generation**: Provide precise timing signals for modular systems
+- **Tempo-Synced Effects**: Generate tempo-locked trigger signals for effects processing
+- **Sequencer Clocking**: Create high-resolution clock signals for external sequencers
+- **Experimental Music**: Explore micro-rhythmic compositions with 24 divisions per beat
+
 ## Features
 
 - **Tempo Synchronization**: Automatically syncs to the host's tempo and stays in time with tempo changes
@@ -59,3 +74,9 @@ This project uses JUCE's Projucer for project management. To modify the project:
 ## License
 
 This project is open source and available under the MIT License.
+
+## Acknowledgments
+
+- **Zac Caruso** for the original idea and inspiration
+- **Synthesizer Zone** Facebook group for fostering creative discussions
+- **JUCE Framework** for providing the excellent audio plugin development platform
