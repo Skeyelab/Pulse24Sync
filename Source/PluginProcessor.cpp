@@ -118,12 +118,12 @@ void Pulse24SyncAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     juce::AudioPlayHead* playHead = getPlayHead();
     if (playHead != nullptr)
     {
-        juce::AudioPlayHead::CurrentPositionInfo posInfo;
-        if (playHead->getCurrentPosition(posInfo))
+        auto posInfo = playHead->getPosition();
+        if (posInfo.hasValue())
         {
-            pulseGenerator.setHostTempo(posInfo.bpm);
-            pulseGenerator.setHostIsPlaying(posInfo.isPlaying);
-            pulseGenerator.setHostPosition(posInfo.timeInSeconds);
+            pulseGenerator.setHostTempo(posInfo->getBpm().orFallback(120.0));
+            pulseGenerator.setHostIsPlaying(posInfo->getIsPlaying());
+            pulseGenerator.setHostPosition(posInfo->getTimeInSeconds().orFallback(0.0));
         }
     }
 

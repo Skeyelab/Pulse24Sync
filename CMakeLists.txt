@@ -5,14 +5,24 @@ project(Pulse24Sync VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Set macOS deployment target to avoid deprecated API issues
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0")
+endif()
+
 # Download and setup JUCE
 include(FetchContent)
 
 FetchContent_Declare(
     JUCE
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-    GIT_TAG 6.1.6
+    GIT_TAG 7.0.12
 )
+
+# Disable JUCE extras to avoid build issues with macOS 15.0 and Linux
+set(JUCE_BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
+set(JUCE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(JUCE_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(JUCE)
 
@@ -34,21 +44,6 @@ juce_add_plugin(Pulse24Sync
     VST3_CATEGORIES "Fx"
     AU_MAIN_TYPE "kAudioUnitType_Effect"
     COPY_PLUGIN_AFTER_BUILD TRUE
-    JUCE_MODULES
-        juce_audio_utils
-        juce_audio_processors
-        juce_core
-        juce_data_structures
-        juce_events
-        juce_graphics
-        juce_gui_basics
-        juce_gui_extra
-        juce_audio_basics
-        juce_audio_devices
-        juce_audio_formats
-        juce_audio_plugin_client
-        juce_audio_plugin_host
-        juce_dsp
 )
 
 # Add source files
@@ -59,13 +54,75 @@ target_sources(Pulse24Sync
         Source/PulseGenerator.cpp
 )
 
-# Set compiler flags
-if(MSVC)
-    target_compile_options(Pulse24Sync PRIVATE /W4)
-else()
-    target_compile_options(Pulse24Sync PRIVATE -Wall -Wextra -Wpedantic)
-endif()
+# Add JUCE modules
+target_compile_definitions(Pulse24Sync
+    PUBLIC
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_VST3_CAN_REPLACE_VST2=0
+)
 
-# Disable JUCE extras to avoid build issues
-set(JUCE_BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
-set(JUCE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+# Generate JuceHeader.h
+juce_generate_juce_header(Pulse24Sync)
+
+# Link JUCE modules
+target_link_libraries(Pulse24Sync
+    PRIVATE
+        juce::juce_audio_utils
+        juce::juce_audio_processors
+        juce::juce_audio_basics
+        juce::juce_audio_devices
+        juce::juce_audio_formats
+        juce::juce_audio_plugin_client
+        juce::juce_core
+        juce::juce_data_structures
+        juce::juce_events
+        juce::juce_graphics
+        juce::juce_gui_basics
+        juce::juce_gui_extra
+    PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags
+)
+
+# Linux-specific configurations
+if(UNIX AND NOT APPLE)
+    find_package(PkgConfig REQUIRED)
+
+    # Find audio systems
+    pkg_check_modules(ALSA REQUIRED alsa)
+    pkg_check_modules(JACK REQUIRED jack)
+
+    # Find GUI libraries
+    pkg_check_modules(FREETYPE REQUIRED freetype2)
+    pkg_check_modules(GL REQUIRED gl)
+    pkg_check_modules(CURL REQUIRED libcurl)
+
+    # Add include directories
+    target_include_directories(Pulse24Sync PRIVATE
+        ${ALSA_INCLUDE_DIRS}
+        ${JACK_INCLUDE_DIRS}
+        ${FREETYPE_INCLUDE_DIRS}
+        ${GL_INCLUDE_DIRS}
+        ${CURL_INCLUDE_DIRS}
+    )
+
+    # Add link libraries
+    target_link_libraries(Pulse24Sync PRIVATE
+        ${ALSA_LIBRARIES}
+        ${JACK_LIBRARIES}
+        ${FREETYPE_LIBRARIES}
+        ${GL_LIBRARIES}
+        ${CURL_LIBRARIES}
+    )
+
+    # Add compile flags
+    target_compile_options(Pulse24Sync PRIVATE
+        ${ALSA_CFLAGS_OTHER}
+        ${JACK_CFLAGS_OTHER}
+        ${FREETYPE_CFLAGS_OTHER}
+        ${GL_CFLAGS_OTHER}
+        ${CURL_CFLAGS_OTHER}
+    )
+endif()
