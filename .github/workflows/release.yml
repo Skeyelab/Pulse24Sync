@@ -25,6 +25,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache JUCE modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/JUCE
+            /Applications/JUCE 2/modules
+            c:\JUCE\modules
+            $env:LOCALAPPDATA\JUCE
+          key: ${{ runner.os }}-juce-modules-${{ hashFiles('Pulse24Sync.jucer') }}
+          restore-keys: |
+            ${{ runner.os }}-juce-modules-
+
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData
+            Builds/MacOSX/build
+            Builds\VisualStudio2022\build
+            $env:LOCALAPPDATA\Microsoft\VisualStudio\*\MSBuild\Current\Bin\Roslyn
+          key: ${{ runner.os }}-build-cache-${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}
+          restore-keys: |
+            ${{ runner.os }}-build-cache-
+
       - name: Setup JUCE and Projucer (macOS)
         if: matrix.os == 'macOS'
         run: |
