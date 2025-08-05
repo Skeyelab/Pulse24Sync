@@ -124,74 +124,62 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup JUCE and Projucer
-        shell: powershell
+        shell: cmd
         run: |
-          # Set execution policy and run our script
-          Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-
-          # Use pre-installed JUCE at c:\JUCE
-          Write-Host "Using pre-installed JUCE at c:\JUCE"
-
-          # Check if Projucer exists at the expected location
-          $projucerPath = "c:\JUCE\Projucer.exe"
-          if (Test-Path $projucerPath) {
-            Write-Host "Found Projucer at: $projucerPath"
-          } else {
-            # Try alternative locations
-            $alternativePaths = @(
-              "c:\JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\Projucer.exe",
-              "c:\Program Files\JUCE\Projucer.exe",
-              "c:\Program Files (x86)\JUCE\Projucer.exe"
+          @echo off
+          echo Using pre-installed JUCE at c:\JUCE
+          
+          REM Check if Projucer exists at the expected location
+          set "projucerPath=c:\JUCE\Projucer.exe"
+          if exist "%projucerPath%" (
+            echo Found Projucer at: %projucerPath%
+          ) else (
+            REM Try alternative locations
+            if exist "c:\JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\Projucer.exe" (
+              set "projucerPath=c:\JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\Projucer.exe"
+              echo Found Projucer at: %projucerPath%
+            ) else if exist "c:\Program Files\JUCE\Projucer.exe" (
+              set "projucerPath=c:\Program Files\JUCE\Projucer.exe"
+              echo Found Projucer at: %projucerPath%
+            ) else if exist "c:\Program Files (x86)\JUCE\Projucer.exe" (
+              set "projucerPath=c:\Program Files (x86)\JUCE\Projucer.exe"
+              echo Found Projucer at: %projucerPath%
+            ) else (
+              echo ERROR: Projucer not found. Please ensure JUCE is installed at c:\JUCE
+              exit /b 1
             )
-
-            foreach ($path in $alternativePaths) {
-              if (Test-Path $path) {
-                $projucerPath = $path
-                Write-Host "Found Projucer at: $projucerPath"
-                break
-              }
-            }
-          }
-
-          if (!(Test-Path $projucerPath)) {
-            Write-Error "Projucer not found. Please ensure JUCE is installed at c:\JUCE"
-            exit 1
-          }
-
-          # Generate Visual Studio project with Projucer
-          Write-Host "Generating Visual Studio project files..."
-          & $projucerPath --resave Pulse24Sync.jucer
-
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to generate project files with Projucer"
-            exit 1
-          }
-
-          # Verify project files were created
-          if (!(Test-Path "Builds\VisualStudio2022\Pulse24Sync.sln")) {
-            Write-Error "Visual Studio solution file was not created"
-            exit 1
-          }
-
-          Write-Host "Project files generated successfully"
+          )
+          
+          REM Generate Visual Studio project with Projucer
+          echo Generating Visual Studio project files...
+          "%projucerPath%" --resave Pulse24Sync.jucer
+          if errorlevel 1 (
+            echo ERROR: Failed to generate project files with Projucer
+            exit /b 1
+          )
+          
+          REM Verify project files were created
+          if not exist "Builds\VisualStudio2022\Pulse24Sync.sln" (
+            echo ERROR: Visual Studio solution file was not created
+            exit /b 1
+          )
+          
+          echo Project files generated successfully
 
       - name: Build Windows Plugin
-        shell: powershell
+        shell: cmd
         run: |
-          # Set execution policy and run our script
-          Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-
-          Write-Host "Building Pulse24Sync plugin..."
-
-          # Build the project
+          @echo off
+          echo Building Pulse24Sync plugin...
+          
+          REM Build the project
           msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /m
-
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Build failed"
-            exit 1
-          }
-
-          Write-Host "Build completed successfully"
+          if errorlevel 1 (
+            echo ERROR: Build failed
+            exit /b 1
+          )
+          
+          echo Build completed successfully
 
       - name: Upload Windows build artifacts
         uses: actions/upload-artifact@v4
