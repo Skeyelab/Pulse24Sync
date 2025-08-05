@@ -1,0 +1,65 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup JUCE
+      run: |
+        git clone https://github.com/juce-framework/JUCE.git
+        cd JUCE
+        git checkout 6.1.6
+
+    - name: Build macOS
+      run: |
+        cd ..
+        xcodebuild -project Builds/MacOSX/Pulse24Sync.xcodeproj -configuration Release
+
+    - name: Upload macOS build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-builds
+        path: |
+          Builds/MacOSX/build/Release/
+          /Users/runner/Library/Audio/Plug-Ins/Components/Pulse24Sync.component
+          /Users/runner/Library/Audio/Plug-Ins/VST3/Pulse24Sync.vst3
+        retention-days: 7
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup JUCE
+      run: |
+        git clone https://github.com/juce-framework/JUCE.git
+        cd JUCE
+        git checkout 6.1.6
+
+    - name: Build Windows VST3
+      run: |
+        cd ..
+        msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=true /m
+
+    - name: Build Windows Standalone
+      run: |
+        msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=true /m /t:Pulse24Sync_StandalonePlugin
+
+    - name: Upload Windows build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-builds
+        path: Builds/VisualStudio2022/build/Release/
+        retention-days: 7
