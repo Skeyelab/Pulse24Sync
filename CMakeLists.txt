@@ -19,7 +19,7 @@ FetchContent_Declare(
     GIT_TAG 7.0.12
 )
 
-# Disable JUCE extras to avoid build issues with macOS 15.0
+# Disable JUCE extras to avoid build issues with macOS 15.0 and Linux
 set(JUCE_BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
 set(JUCE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(JUCE_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
@@ -30,7 +30,7 @@ FetchContent_MakeAvailable(JUCE)
 juce_add_plugin(Pulse24Sync
     COMPANY_NAME "Pulse24Sync"
     PLUGIN_NAME "Pulse24Sync"
-    COMPANY_WEBSITE "https://github.com/Skeyelab/Pulse24Sync"
+    COMPANY_WEBSITE "https://github.com/yourusername/Pulse24Sync"
     COMPANY_EMAIL "your.email@example.com"
     PLUGIN_MANUFACTURER_CODE Puls
     PLUGIN_CODE P24s
@@ -40,25 +40,10 @@ juce_add_plugin(Pulse24Sync
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT TRUE
     IS_MIDI_EFFECT FALSE
-    EDITOR_WANTS_KEYBOARD_FOCUS FALSE
+    EDITOR_REQUIRES_KEYBOARD_FOCUS FALSE
     VST3_CATEGORIES "Fx"
     AU_MAIN_TYPE "kAudioUnitType_Effect"
     COPY_PLUGIN_AFTER_BUILD TRUE
-    JUCE_MODULES
-        juce_audio_utils
-        juce_audio_processors
-        juce_core
-        juce_data_structures
-        juce_events
-        juce_graphics
-        juce_gui_basics
-        juce_gui_extra
-        juce_audio_basics
-        juce_audio_devices
-        juce_audio_formats
-        juce_audio_plugin_client
-        juce_audio_plugin_host
-        juce_dsp
 )
 
 # Add source files
@@ -69,17 +54,51 @@ target_sources(Pulse24Sync
         Source/PulseGenerator.cpp
 )
 
-# Set compiler flags
-if(MSVC)
-    target_compile_options(Pulse24Sync PRIVATE /W4)
-else()
-    target_compile_options(Pulse24Sync PRIVATE -Wall -Wextra -Wpedantic)
-endif()
+# Link JUCE modules
+target_link_libraries(Pulse24Sync
+    PRIVATE
+        juce::juce_audio_utils
+        juce::juce_audio_processors
+        juce::juce_audio_basics
+        juce::juce_audio_devices
+        juce::juce_audio_formats
+        juce::juce_audio_plugin_client
+        juce::juce_core
+        juce::juce_data_structures
+        juce::juce_events
+        juce::juce_graphics
+        juce::juce_gui_basics
+        juce::juce_gui_extra
+)
 
-# Add compiler-specific flags to handle deprecated APIs
-if(APPLE)
-    target_compile_options(Pulse24Sync PRIVATE
-        -Wno-deprecated-declarations
-        -Wno-unused-but-set-variable
+# Set include directories
+target_include_directories(Pulse24Sync
+    PRIVATE
+        Source
+)
+
+# Platform-specific settings
+if(UNIX AND NOT APPLE)
+    # Linux-specific settings
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(ALSA REQUIRED alsa)
+    pkg_check_modules(JACK REQUIRED jack)
+
+    target_link_libraries(Pulse24Sync
+        PRIVATE
+            ${ALSA_LIBRARIES}
+            ${JACK_LIBRARIES}
+    )
+
+    target_include_directories(Pulse24Sync
+        PRIVATE
+            ${ALSA_INCLUDE_DIRS}
+            ${JACK_INCLUDE_DIRS}
+    )
+
+    target_compile_options(Pulse24Sync
+        PRIVATE
+            ${ALSA_CFLAGS_OTHER}
+            ${JACK_CFLAGS_OTHER}
     )
 endif()

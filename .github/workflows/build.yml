@@ -35,16 +35,17 @@ jobs:
         Projucer --resave Pulse24Sync.jucer
 
         # Build the project
-        xcodebuild -project Builds/MacOSX/Pulse24Sync.xcodeproj -configuration Release
+        cd Builds/MacOSX
+        xcodebuild -project Pulse24Sync.xcodeproj -configuration Release -target "Pulse24Sync - VST3" -target "Pulse24Sync - AU"
 
     - name: Upload macOS build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: macos-builds
         path: |
-          Builds/MacOSX/build/Release/
-          /Users/runner/Library/Audio/Plug-Ins/Components/Pulse24Sync.component
-          /Users/runner/Library/Audio/Plug-Ins/VST3/Pulse24Sync.vst3
+          Builds/MacOSX/build/Release/Pulse24Sync.vst3
+          Builds/MacOSX/build/Release/Pulse24Sync.component
+          Builds/MacOSX/build/Release/Pulse24Sync.app
         retention-days: 7
 
   build-windows:
@@ -64,27 +65,27 @@ jobs:
         # Build Projucer
         cd extras/Projucer/Builds/VisualStudio2022
         msbuild Projucer.sln /p:Configuration=Release /p:Platform=x64
+        cd ../../../..
 
         # Add Projucer to PATH
-        echo "$PWD/x64/Release/Projucer.exe" >> $env:GITHUB_PATH
-        cd ../../../..
+        echo "$PWD/JUCE/extras/Projucer/Builds/VisualStudio2022/x64/Release/App/Projucer.exe" >> $GITHUB_PATH
 
     - name: Build Windows with Projucer
       run: |
         # Generate Visual Studio project
-        Projucer --resave Pulse24Sync.jucer
+        Projucer.exe --resave Pulse24Sync.jucer
 
-        # Build VST3
-        msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=true /m
-
-        # Build Standalone
-        msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=true /m /t:Pulse24Sync_StandalonePlugin
+        # Build the project
+        cd Builds/VisualStudio2022
+        msbuild Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64
 
     - name: Upload Windows build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: windows-builds
-        path: Builds/VisualStudio2022/build/Release/
+        path: |
+          Builds/VisualStudio2022/x64/Release/Pulse24Sync.vst3
+          Builds/VisualStudio2022/x64/Release/Pulse24Sync.exe
         retention-days: 7
 
   build-linux:
@@ -97,18 +98,21 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential cmake libasound2-dev libjack-jackd2-dev
+        sudo apt-get install -y build-essential cmake libasound2-dev libjack-jackd2-dev \
+          libfreetype6-dev libcurl4-openssl-dev libwebkit2gtk-4.0-dev libgtk-3-dev \
+          libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
 
     - name: Build Linux with CMake
       run: |
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXTRAS=OFF -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_BUILD_TOOLS=OFF
         make -j$(nproc)
 
     - name: Upload Linux build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: linux-builds
-        path: build/Pulse24Sync_artefacts/Release/
+        path: |
+          build/Pulse24Sync_artefacts/Release/
         retention-days: 7
