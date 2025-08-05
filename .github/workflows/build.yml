@@ -9,6 +9,7 @@ on:
 jobs:
   build-macos:
     runs-on: macOS
+    if: false  # Disabled - set to true to enable
 
     steps:
     - name: Checkout code
@@ -45,43 +46,42 @@ jobs:
           ~/Library/Audio/Plug-Ins/VST3/Pulse24Sync.vst3
         retention-days: 7
 
-  # Windows build disabled for now - uncomment when needed
-  # build-windows:
-  #   runs-on: windows-latest
-  #   if: false  # Disabled - set to true to enable
-  #
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v4
-  #
-  #   - name: Setup JUCE and Projucer
-  #     run: |
-  #       # Download JUCE
-  #       git clone https://github.com/juce-framework/JUCE.git
-  #       cd JUCE
-  #       git checkout 7.0.12
-  #
-  #       # Build Projucer
-  #       cd extras/Projucer/Builds/VisualStudio2022
-  #       msbuild Projucer.sln /p:Configuration=Release /p:Platform=x64
-  #       cd ../../../..
-  #
-  #   - name: Build Windows with Projucer
-  #     run: |
-  #       # Generate Visual Studio project using full path to Projucer
-  #       .\JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\App\Projucer.exe --resave Pulse24Sync.jucer
-  #
-  #       # Build the project
-  #       cd Builds\VisualStudio2022
-  #       msbuild Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64
-  #
-  #   - name: Upload Windows build artifacts
-  #     uses: actions/upload-artifact@v4
-  #     with:
-  #       name: windows-builds
-  #       path: |
-  #         Builds/VisualStudio2022/x64/Release/
-  #       retention-days: 7
+  build-windows:
+    runs-on: windows-latest
+    if: false  # Disabled - set to true to enable
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup JUCE and Projucer
+      run: |
+        # Download JUCE
+        git clone https://github.com/juce-framework/JUCE.git
+        cd JUCE
+        git checkout 7.0.12
+
+        # Build Projucer
+        cd extras/Projucer/Builds/VisualStudio2022
+        msbuild Projucer.sln /p:Configuration=Release /p:Platform=x64
+        cd ../../../..
+
+    - name: Build Windows with Projucer
+      run: |
+        # Generate Visual Studio project using full path to Projucer
+        .\JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\App\Projucer.exe --resave Pulse24Sync.jucer
+
+        # Build the project
+        cd Builds\VisualStudio2022
+        msbuild Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64
+
+    - name: Upload Windows build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-builds
+        path: |
+          Builds/VisualStudio2022/x64/Release/
+        retention-days: 7
 
   build-linux:
     runs-on: ubuntu-24.04
