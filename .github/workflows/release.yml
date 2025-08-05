@@ -10,12 +10,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS, windows-latest]
+        os: [macOS, Windows]
         include:
           - os: macOS
             artifact-name: macos-builds
             build-path: Builds/MacOSX/build/Release/
-          - os: windows-latest
+          - os: Windows
             artifact-name: windows-builds
             build-path: |
               Builds/VisualStudio2022/x64/Release/
@@ -85,7 +85,7 @@ jobs:
           echo "Project files generated successfully"
 
       - name: Setup JUCE and Projucer (Windows)
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'Windows'
         shell: powershell
         run: |
           # Set execution policy and run our script
@@ -166,7 +166,7 @@ jobs:
           echo "Build completed successfully"
 
       - name: Build Windows Plugin
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'Windows'
         shell: cmd
         run: |
           echo Building Pulse24Sync plugin...

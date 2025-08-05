@@ -173,7 +173,7 @@ jobs:
 
   build-windows:
     runs-on: Windows
-    if: true  # Disabled - set to true to enable
+    if: true  # Enabled for Windows builds
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

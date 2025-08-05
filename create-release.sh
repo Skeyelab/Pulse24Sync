@@ -112,4 +112,4 @@ echo
 echo -e "${GREEN}🎉 Release will be available at:${NC}"
 echo "https://github.com/$(git config --get remote.origin.url | sed 's/.*github.com[:/]\([^/]*\/[^/]*\).*/\1/')/releases/tag/$TAG_NAME"
 echo
-echo -e "${BLUE}📝 Note: The release workflow will take a few minutes to complete.${NC}" 
+echo -e "${BLUE}📝 Note: The release workflow will take a few minutes to complete.${NC}"
