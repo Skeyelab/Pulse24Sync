@@ -8,12 +8,12 @@ Pulse24SyncAudioProcessorEditor::Pulse24SyncAudioProcessorEditor(Pulse24SyncAudi
     setupUI();
 
     // Start timer for status updates
-    statusTimer.startTimerHz(10); // Update 10 times per second
+    startTimerHz(10); // Update 10 times per second
 }
 
 Pulse24SyncAudioProcessorEditor::~Pulse24SyncAudioProcessorEditor()
 {
-    statusTimer.stopTimer();
+    stopTimer();
 }
 
 void Pulse24SyncAudioProcessorEditor::paint(juce::Graphics& g)
@@ -130,9 +130,11 @@ void Pulse24SyncAudioProcessorEditor::setupUI()
     manualBPMSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
     manualBPMAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.parameters, "manualBPM", manualBPMSlider);
+}
 
-    // Set up timer callback
-    statusTimer.onTimer = [this]() { updateStatus(); };
+void Pulse24SyncAudioProcessorEditor::timerCallback()
+{
+    updateStatus();
 }
 
 void Pulse24SyncAudioProcessorEditor::updateStatus()

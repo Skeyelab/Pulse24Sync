@@ -3,7 +3,7 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
-class Pulse24SyncAudioProcessorEditor : public juce::AudioProcessorEditor
+class Pulse24SyncAudioProcessorEditor : public juce::AudioProcessorEditor, public juce::Timer
 {
 public:
     Pulse24SyncAudioProcessorEditor(Pulse24SyncAudioProcessor&);
@@ -11,6 +11,7 @@ public:
 
     void paint(juce::Graphics&) override;
     void resized() override;
+    void timerCallback() override;
 
 private:
     Pulse24SyncAudioProcessor& audioProcessor;
@@ -37,9 +38,6 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> channelAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> syncToHostAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> manualBPMAttachment;
-
-    // Timer for status updates
-    juce::Timer statusTimer;
 
     void setupUI();
     void updateStatus();

@@ -15,7 +15,7 @@ public:
 
     // Parameter setters
     void setEnabled(bool enabled) { isEnabled = enabled; }
-    void setPulseVelocity(float velocity) { pulseVelocity = static_cast<uint8>(velocity); }
+    void setPulseVelocity(float velocity) { pulseVelocity = static_cast<juce::uint8>(velocity); }
     void setPulseChannel(int channel) { pulseChannel = channel; }
     void setSyncToHost(bool sync) { syncToHost = sync; }
     void setManualBPM(float bpm) { manualBPM = bpm; }
@@ -37,7 +37,7 @@ public:
 private:
     // Parameters
     bool isEnabled = true;
-    uint8 pulseVelocity = 100;
+    juce::uint8 pulseVelocity = 100;
     int pulseChannel = 1;
     bool syncToHost = true;
     float manualBPM = 120.0f;

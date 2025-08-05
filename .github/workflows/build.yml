@@ -14,19 +14,35 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Build macOS with CMake
+    - name: Setup JUCE and Projucer
       run: |
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
-        make -j$(sysctl -n hw.ncpu)
+        # Download JUCE
+        git clone https://github.com/juce-framework/JUCE.git
+        cd JUCE
+        git checkout 7.0.12
+
+        # Build Projucer
+        cd extras/Projucer/Builds/MacOSX
+        xcodebuild -project Projucer.xcodeproj -configuration Release
+        cd ../../../..
+
+        # Add Projucer to PATH
+        echo "$PWD/JUCE/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS" >> $GITHUB_PATH
+
+    - name: Build macOS with Projucer
+      run: |
+        # Generate Xcode project
+        Projucer --resave Pulse24Sync.jucer
+
+        # Build the project
+        xcodebuild -project Builds/MacOSX/Pulse24Sync.xcodeproj -configuration Release
 
     - name: Upload macOS build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: macos-builds
         path: |
-          build/Pulse24Sync_artefacts/Release/
+          Builds/MacOSX/build/Release/
           /Users/runner/Library/Audio/Plug-Ins/Components/Pulse24Sync.component
           /Users/runner/Library/Audio/Plug-Ins/VST3/Pulse24Sync.vst3
         retention-days: 7
@@ -38,18 +54,37 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Build Windows with CMake
+    - name: Setup JUCE and Projucer
       run: |
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
-        cmake --build . --config Release --parallel
+        # Download JUCE
+        git clone https://github.com/juce-framework/JUCE.git
+        cd JUCE
+        git checkout 7.0.12
+
+        # Build Projucer
+        cd extras/Projucer/Builds/VisualStudio2022
+        msbuild Projucer.sln /p:Configuration=Release /p:Platform=x64
+
+        # Add Projucer to PATH
+        echo "$PWD/x64/Release/Projucer.exe" >> $env:GITHUB_PATH
+        cd ../../../..
+
+    - name: Build Windows with Projucer
+      run: |
+        # Generate Visual Studio project
+        Projucer --resave Pulse24Sync.jucer
+
+        # Build VST3
+        msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=true /m
+
+        # Build Standalone
+        msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=true /m /t:Pulse24Sync_StandalonePlugin
 
     - name: Upload Windows build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: windows-builds
-        path: build/Pulse24Sync_artefacts/Release/
+        path: Builds/VisualStudio2022/build/Release/
         retention-days: 7
 
   build-linux:

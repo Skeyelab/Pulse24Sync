@@ -5,14 +5,24 @@ project(Pulse24Sync VERSION 1.0.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Set macOS deployment target to avoid deprecated API issues
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0")
+endif()
+
 # Download and setup JUCE
 include(FetchContent)
 
 FetchContent_Declare(
     JUCE
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-    GIT_TAG 6.1.6
+    GIT_TAG 7.0.12
 )
+
+# Disable JUCE extras to avoid build issues with macOS 15.0
+set(JUCE_BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
+set(JUCE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(JUCE_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(JUCE)
 
@@ -20,7 +30,7 @@ FetchContent_MakeAvailable(JUCE)
 juce_add_plugin(Pulse24Sync
     COMPANY_NAME "Pulse24Sync"
     PLUGIN_NAME "Pulse24Sync"
-    COMPANY_WEBSITE "https://github.com/yourusername/Pulse24Sync"
+    COMPANY_WEBSITE "https://github.com/Skeyelab/Pulse24Sync"
     COMPANY_EMAIL "your.email@example.com"
     PLUGIN_MANUFACTURER_CODE Puls
     PLUGIN_CODE P24s
@@ -66,6 +76,10 @@ else()
     target_compile_options(Pulse24Sync PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-# Disable JUCE extras to avoid build issues
-set(JUCE_BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
-set(JUCE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+# Add compiler-specific flags to handle deprecated APIs
+if(APPLE)
+    target_compile_options(Pulse24Sync PRIVATE
+        -Wno-deprecated-declarations
+        -Wno-unused-but-set-variable
+    )
+endif()
