@@ -1,112 +1,165 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin editor.
-
-  ==============================================================================
-*/
-
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-//==============================================================================
-Pulse24SyncAudioProcessorEditor::Pulse24SyncAudioProcessorEditor (Pulse24SyncAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+Pulse24SyncAudioProcessorEditor::Pulse24SyncAudioProcessorEditor(Pulse24SyncAudioProcessor& p)
+    : AudioProcessorEditor(&p), audioProcessor(p)
 {
-    // Set window size
-    setSize (400, 300);
+    setSize(400, 500);
+    setupUI();
 
-    // Setup title label
-    titleLabel.setText("Pulse24Sync", juce::dontSendNotification);
-    titleLabel.setFont(juce::Font(24.0f, juce::Font::bold));
-    titleLabel.setJustificationType(juce::Justification::centred);
-    titleLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    addAndMakeVisible(titleLabel);
-
-    // Setup enabled button
-    enabledLabel.setText("Enabled", juce::dontSendNotification);
-    enabledLabel.setJustificationType(juce::Justification::centred);
-    enabledLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    addAndMakeVisible(enabledLabel);
-    addAndMakeVisible(enabledButton);
-
-    // Setup volume slider
-    volumeLabel.setText("Volume", juce::dontSendNotification);
-    volumeLabel.setJustificationType(juce::Justification::centred);
-    volumeLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    addAndMakeVisible(volumeLabel);
-
-    volumeSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    volumeSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
-    volumeSlider.setRange(0.0, 1.0, 0.01);
-    volumeSlider.setValue(0.5);
-    addAndMakeVisible(volumeSlider);
-
-    // Setup width slider
-    widthLabel.setText("Pulse Width", juce::dontSendNotification);
-    widthLabel.setJustificationType(juce::Justification::centred);
-    widthLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    addAndMakeVisible(widthLabel);
-
-    widthSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    widthSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
-    widthSlider.setRange(0.01, 0.5, 0.01);
-    widthSlider.setValue(0.1);
-    addAndMakeVisible(widthSlider);
-
-    // Setup parameter attachments
-    enabledAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        audioProcessor.getParameters(), "enabled", enabledButton);
-    volumeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), "volume", volumeSlider);
-    widthAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.getParameters(), "width", widthSlider);
+    // Start timer for status updates
+    startTimerHz(10); // Update 10 times per second
 }
 
 Pulse24SyncAudioProcessorEditor::~Pulse24SyncAudioProcessorEditor()
 {
+    stopTimer();
 }
 
-//==============================================================================
-void Pulse24SyncAudioProcessorEditor::paint (juce::Graphics& g)
+void Pulse24SyncAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    // Background gradient
-    g.setGradientFill(juce::ColourGradient(
-        juce::Colour(0xff1e1e1e),
-        0.0f, 0.0f,
-        juce::Colour(0xff2d2d2d),
-        getWidth(), getHeight(),
-        false));
-    g.fillAll();
+    g.fillAll(juce::Colour(0xff1e1e1e));
 
-    // Draw border
-    g.setColour(juce::Colour(0xff404040));
-    g.drawRect(getLocalBounds(), 2);
+    // Draw title
+    g.setColour(juce::Colours::white);
+    g.setFont(20.0f);
+    g.drawText("Pulse24Sync", getLocalBounds().removeFromTop(40), juce::Justification::centred);
+
+    // Draw subtitle
+    g.setFont(12.0f);
+    g.setColour(juce::Colours::lightgrey);
+    g.drawText("24 Pulses per Quarter Note", getLocalBounds().removeFromTop(60).removeFromTop(20), juce::Justification::centred);
 }
 
 void Pulse24SyncAudioProcessorEditor::resized()
 {
     auto bounds = getLocalBounds().reduced(20);
+    bounds.removeFromTop(80); // Space for title
 
-    // Title at the top
-    titleLabel.setBounds(bounds.removeFromTop(40));
-    bounds.removeFromTop(20);
+    // Status label at top
+    statusLabel.setBounds(bounds.removeFromTop(30));
+    bounds.removeFromTop(10);
 
-    // Enabled section
-    auto enabledSection = bounds.removeFromTop(60);
-    enabledLabel.setBounds(enabledSection.removeFromTop(20));
-    enabledButton.setBounds(enabledSection.reduced(0, 10));
+    // Enabled button
+    enabledButton.setBounds(bounds.removeFromTop(30));
+    bounds.removeFromTop(10);
 
-    bounds.removeFromTop(20);
+    // Velocity slider
+    velocityLabel.setBounds(bounds.removeFromTop(20));
+    velocitySlider.setBounds(bounds.removeFromTop(40));
+    bounds.removeFromTop(10);
 
-    // Volume and width sliders side by side
-    auto sliderSection = bounds.removeFromTop(120);
-    auto volumeSection = sliderSection.removeFromLeft(sliderSection.getWidth() / 2);
-    auto widthSection = sliderSection;
+    // Channel slider
+    channelLabel.setBounds(bounds.removeFromTop(20));
+    channelSlider.setBounds(bounds.removeFromTop(40));
+    bounds.removeFromTop(10);
 
-    volumeLabel.setBounds(volumeSection.removeFromTop(20));
-    volumeSlider.setBounds(volumeSection);
+    // Sync to host button
+    syncToHostButton.setBounds(bounds.removeFromTop(30));
+    bounds.removeFromTop(10);
 
-    widthLabel.setBounds(widthSection.removeFromTop(20));
-    widthSlider.setBounds(widthSection);
+    // Manual BPM slider
+    manualBPMLabel.setBounds(bounds.removeFromTop(20));
+    manualBPMSlider.setBounds(bounds.removeFromTop(40));
+    bounds.removeFromTop(10);
+}
+
+void Pulse24SyncAudioProcessorEditor::setupUI()
+{
+    // Title label
+    addAndMakeVisible(titleLabel);
+    titleLabel.setText("Pulse24Sync", juce::dontSendNotification);
+    titleLabel.setFont(juce::Font(20.0f, juce::Font::bold));
+    titleLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    titleLabel.setJustificationType(juce::Justification::centred);
+
+    // Status label
+    addAndMakeVisible(statusLabel);
+    statusLabel.setText("Status: Ready", juce::dontSendNotification);
+    statusLabel.setFont(juce::Font(12.0f));
+    statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
+    statusLabel.setJustificationType(juce::Justification::centred);
+
+    // Enabled button
+    addAndMakeVisible(enabledButton);
+    enabledButton.setButtonText("Enabled");
+    enabledAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+        audioProcessor.parameters, "enabled", enabledButton);
+
+    // Velocity slider
+    addAndMakeVisible(velocityLabel);
+    velocityLabel.setText("Pulse Velocity", juce::dontSendNotification);
+    velocityLabel.setFont(juce::Font(12.0f));
+    velocityLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    velocityLabel.setJustificationType(juce::Justification::centred);
+
+    addAndMakeVisible(velocitySlider);
+    velocitySlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    velocitySlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    velocityAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.parameters, "pulseVelocity", velocitySlider);
+
+    // Channel slider
+    addAndMakeVisible(channelLabel);
+    channelLabel.setText("MIDI Channel", juce::dontSendNotification);
+    channelLabel.setFont(juce::Font(12.0f));
+    channelLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    channelLabel.setJustificationType(juce::Justification::centred);
+
+    addAndMakeVisible(channelSlider);
+    channelSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    channelSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    channelAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.parameters, "pulseChannel", channelSlider);
+
+    // Sync to host button
+    addAndMakeVisible(syncToHostButton);
+    syncToHostButton.setButtonText("Sync to Host Tempo");
+    syncToHostAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+        audioProcessor.parameters, "syncToHost", syncToHostButton);
+
+    // Manual BPM slider
+    addAndMakeVisible(manualBPMLabel);
+    manualBPMLabel.setText("Manual BPM", juce::dontSendNotification);
+    manualBPMLabel.setFont(juce::Font(12.0f));
+    manualBPMLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    manualBPMLabel.setJustificationType(juce::Justification::centred);
+
+    addAndMakeVisible(manualBPMSlider);
+    manualBPMSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    manualBPMSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    manualBPMAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.parameters, "manualBPM", manualBPMSlider);
+}
+
+void Pulse24SyncAudioProcessorEditor::timerCallback()
+{
+    updateStatus();
+}
+
+void Pulse24SyncAudioProcessorEditor::updateStatus()
+{
+    auto& pulseGen = audioProcessor.pulseGenerator;
+
+    juce::String statusText = "Status: ";
+
+    if (!pulseGen.getEnabled())
+    {
+        statusText += "Disabled";
+        statusLabel.setColour(juce::Label::textColourId, juce::Colours::grey);
+    }
+    else if (!pulseGen.getSyncToHost())
+    {
+        statusText += "Manual Mode - " + juce::String(pulseGen.getManualBPM(), 1) + " BPM";
+        statusLabel.setColour(juce::Label::textColourId, juce::Colours::orange);
+    }
+    else
+    {
+        statusText += "Host Sync - " + juce::String(pulseGen.getCurrentBPM(), 1) + " BPM";
+        statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
+    }
+
+    statusText += " | Rate: " + juce::String(pulseGen.getPulseRate(), 1) + " Hz";
+
+    statusLabel.setText(statusText, juce::dontSendNotification);
 }
