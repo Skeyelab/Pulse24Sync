@@ -13,12 +13,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Linux with Docker and Projucer
+      - name: Build Linux with Docker and CMake
         run: |
           # Create a Dockerfile for the build environment
           cat > Dockerfile << 'EOF'
           FROM ubuntu:24.04
-          
+
           # Install dependencies
           RUN apt-get update && apt-get install -y \
             build-essential \
@@ -35,53 +35,40 @@ jobs:
             libxinerama-dev \
             libxcursor-dev \
             libxi-dev \
+            pkg-config \
             && rm -rf /var/lib/apt/lists/*
-          
+
           # Set working directory
           WORKDIR /workspace
-          
+
           # Copy project files
           COPY . .
-          
-          # Clone JUCE and build Projucer
+
+          # Clone JUCE
           RUN git clone https://github.com/juce-framework/JUCE.git && \
               cd JUCE && \
-              git checkout 7.0.12 && \
-              cd extras/Projucer/Builds/LinuxMakefile && \
+              git checkout 7.0.12
+
+          # Create build directory and build with CMake
+          RUN mkdir -p build && \
+              cd build && \
+              cmake .. -DCMAKE_BUILD_TYPE=Release \
+                -DJUCE_BUILD_EXTRAS=OFF \
+                -DJUCE_BUILD_EXAMPLES=OFF \
+                -DJUCE_ENABLE_MODULE_SOURCE_GROUPS=ON && \
               make -j$(nproc)
-          
-          # Try a different approach - use the exact same path format but with correct relative path
-          # The original paths were relative to the project root, so let's use that
-          RUN sed -i 's|path="../../../Downloads/JUCE/modules"|path="JUCE/modules"|g' Pulse24Sync.jucer && \
-              sed -i 's|path="../JUCE/modules"|path="JUCE/modules"|g' Pulse24Sync.jucer
-          
-          # Debug: Show what the paths look like after sed
-          RUN echo "=== PATHS AFTER SED ===" && grep -n "path=" Pulse24Sync.jucer
-          
-          # Debug: Check if the path actually exists
-          RUN echo "=== PATH EXISTS CHECK ===" && \
-              pwd && \
-              ls -la && \
-              echo "JUCE modules exist:" && ls -la JUCE/modules/ && \
-              echo "Testing relative path:" && ls -la JUCE/modules/juce_core/
-          
-          # Generate project with Projucer
-          RUN ./JUCE/extras/Projucer/Builds/LinuxMakefile/build/Projucer --resave Pulse24Sync.jucer
-          
-          # Build the project
-          RUN cd Builds/LinuxMakefile && make -j$(nproc)
-          
+
           # Keep container running to copy artifacts
           CMD ["tail", "-f", "/dev/null"]
           EOF
-          
+
           # Build and run the Docker container
           docker build -t pulse24sync-build .
           docker run -d --name build-container pulse24sync-build tail -f /dev/null
-          
+
           # Copy build artifacts from container
-          docker cp build-container:/workspace/Builds/LinuxMakefile/build ./linux-builds
-          
+          docker cp build-container:/workspace/build ./linux-builds
+
           # Clean up
           docker stop build-container
           docker rm build-container
@@ -129,8 +116,8 @@ jobs:
           path: Builds/MacOSX/build/Release/
 
   build-windows:
-    runs-on: windows-latest
-    if: false  # Disabled - set to true to enable
+    runs-on: Windows
+    if: true  # Disabled - set to true to enable
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
   libxinerama-dev \
   libxcursor-dev \
   libxi-dev \
+  pkg-config \
   && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -24,33 +25,17 @@ WORKDIR /workspace
 # Copy project files
 COPY . .
 
-# Clone JUCE and build Projucer
-RUN git clone https://github.com/juce-framework/JUCE.git && \
-    cd JUCE && \
-    git checkout 7.0.12 && \
-    cd extras/Projucer/Builds/LinuxMakefile && \
+# Clean up any existing build artifacts and cache
+RUN rm -rf build/ && rm -rf CMakeCache.txt && rm -rf CMakeFiles/
+
+# Create build directory and build with CMake
+RUN mkdir -p build && \
+    cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release \
+      -DJUCE_BUILD_EXTRAS=OFF \
+      -DJUCE_BUILD_EXAMPLES=OFF \
+      -DJUCE_ENABLE_MODULE_SOURCE_GROUPS=ON && \
     make -j$(nproc)
-
-# Try a different approach - use the exact same path format but with correct relative path
-# The original paths were relative to the project root, so let's use that
-RUN sed -i 's|path="../../../Downloads/JUCE/modules"|path="JUCE/modules"|g' Pulse24Sync.jucer && \
-    sed -i 's|path="../JUCE/modules"|path="JUCE/modules"|g' Pulse24Sync.jucer
-
-# Debug: Show what the paths look like after sed
-RUN echo "=== PATHS AFTER SED ===" && grep -n "path=" Pulse24Sync.jucer
-
-# Debug: Check if the path actually exists
-RUN echo "=== PATH EXISTS CHECK ===" && \
-    pwd && \
-    ls -la && \
-    echo "JUCE modules exist:" && ls -la JUCE/modules/ && \
-    echo "Testing relative path:" && ls -la JUCE/modules/juce_core/
-
-# Generate project with Projucer
-RUN ./JUCE/extras/Projucer/Builds/LinuxMakefile/build/Projucer --resave Pulse24Sync.jucer
-
-# Build the project
-RUN cd Builds/LinuxMakefile && make -j$(nproc)
 
 # Keep container running to copy artifacts
 CMD ["tail", "-f", "/dev/null"]
