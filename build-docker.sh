@@ -1,44 +1,27 @@
 #!/bin/bash
+set -e
 
-# Pulse24Sync VST Plugin Docker Build Script
-# This script builds the VST plugin using Docker to avoid macOS compatibility issues
+echo "🐳 Building Pulse24Sync with Docker and Projucer..."
 
-set -e  # Exit on any error
-
-echo "🎵 Building Pulse24Sync VST Plugin with Docker..."
-echo "================================================"
-
-# Check if Docker is installed
+# Check if Docker is available
 if ! command -v docker &> /dev/null; then
-    echo "❌ Error: Docker is not installed. Please install Docker first."
+    echo "❌ Error: Docker is not installed or not in PATH"
     exit 1
 fi
 
-# Check if docker-compose is installed
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Error: docker-compose is not installed. Please install docker-compose first."
-    exit 1
-fi
+echo "📦 Building Docker image..."
+docker build -t pulse24sync-build .
 
-# Build the Docker image
-echo "🐳 Building Docker image..."
-docker-compose build
+echo "🚀 Running build container..."
+docker run -d --name build-container pulse24sync-build tail -f /dev/null
 
-# Run the build
-echo "🔨 Building VST plugin in Docker container..."
-docker-compose run --rm pulse24sync-build bash -c "
-    cd /workspace/Pulse24Sync
-    rm -rf build
-    mkdir build
-    cd build
-    cmake ..
-    make -j\$(nproc)
-    echo '✅ Build completed successfully!'
-    echo '📦 VST3 plugin should be in the build directory'
-"
+echo "📋 Copying build artifacts..."
+mkdir -p linux-builds
+docker cp build-container:/workspace/Builds/LinuxMakefile/build ./linux-builds
 
-echo ""
-echo "✅ Docker build completed successfully!"
-echo "📦 Check the build/ directory for your VST plugin files"
-echo ""
-echo "🎉 You can now copy the VST plugin to your DAW's plugin directory!" 
+echo "🧹 Cleaning up..."
+docker stop build-container
+docker rm build-container
+
+echo "✅ Build completed! Check the 'linux-builds' directory for artifacts."
+ls -la linux-builds/

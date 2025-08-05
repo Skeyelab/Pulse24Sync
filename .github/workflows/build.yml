@@ -1,193 +1,162 @@
-name: Build and Test
+name: Build Pulse24Sync
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, fix-ci ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  build-macos:
-    runs-on: macOS
-    if: false  # Disabled - set to true to enable
-
+  build-linux:
+    runs-on: ubuntu-24.04
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Cache JUCE
-      uses: actions/cache@v4
-      with:
-        path: |
-          JUCE
-          ~/Library/Caches/com.juce.Projucer
-        key: ${{ runner.os }}-juce-${{ hashFiles('**/Pulse24Sync.jucer') }}
-        restore-keys: |
-          ${{ runner.os }}-juce-
+      - name: Build Linux with Docker and Projucer
+        run: |
+          # Create a Dockerfile for the build environment
+          cat > Dockerfile << 'EOF'
+          FROM ubuntu:24.04
+          
+          # Install dependencies
+          RUN apt-get update && apt-get install -y \
+            build-essential \
+            cmake \
+            git \
+            libasound2-dev \
+            libjack-jackd2-dev \
+            libfreetype6-dev \
+            libcurl4-openssl-dev \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            && rm -rf /var/lib/apt/lists/*
+          
+          # Set working directory
+          WORKDIR /workspace
+          
+          # Copy project files
+          COPY . .
+          
+          # Clone JUCE and build Projucer
+          RUN git clone https://github.com/juce-framework/JUCE.git && \
+              cd JUCE && \
+              git checkout 7.0.12 && \
+              cd extras/Projucer/Builds/LinuxMakefile && \
+              make -j$(nproc)
+          
+          # Try a different approach - use the exact same path format but with correct relative path
+          # The original paths were relative to the project root, so let's use that
+          RUN sed -i 's|path="../../../Downloads/JUCE/modules"|path="JUCE/modules"|g' Pulse24Sync.jucer && \
+              sed -i 's|path="../JUCE/modules"|path="JUCE/modules"|g' Pulse24Sync.jucer
+          
+          # Debug: Show what the paths look like after sed
+          RUN echo "=== PATHS AFTER SED ===" && grep -n "path=" Pulse24Sync.jucer
+          
+          # Generate project with Projucer
+          RUN ./JUCE/extras/Projucer/Builds/LinuxMakefile/build/Projucer --resave Pulse24Sync.jucer
+          
+          # Build the project
+          RUN cd Builds/LinuxMakefile && make -j$(nproc)
+          
+          # Keep container running to copy artifacts
+          CMD ["tail", "-f", "/dev/null"]
+          EOF
+          
+          # Build and run the Docker container
+          docker build -t pulse24sync-build .
+          docker run -d --name build-container pulse24sync-build tail -f /dev/null
+          
+          # Copy build artifacts from container
+          docker cp build-container:/workspace/Builds/LinuxMakefile/build ./linux-builds
+          
+          # Clean up
+          docker stop build-container
+          docker rm build-container
 
-    - name: Setup JUCE and Projucer
-      run: |
-        # Download JUCE if not cached
-        if [ ! -d "JUCE" ]; then
-          git clone https://github.com/juce-framework/JUCE.git
-          cd JUCE
-          git checkout 7.0.12
-          cd ..
-        fi
+      - name: Upload Linux build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-builds
+          path: linux-builds/
 
-        # Build Projucer if not already built
-        if [ ! -f "JUCE/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer" ]; then
-          cd JUCE
-          cd extras/Projucer/Builds/MacOSX
-          xcodebuild -project Projucer.xcodeproj -configuration Release
-          cd ../../..
-        fi
+  build-macos:
+    runs-on: macos-14
+    if: false  # Disabled - set to true to enable
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Build macOS with Projucer
-      run: |
-        # Generate Xcode project using full path to Projucer
-        ./JUCE/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer --resave Pulse24Sync.jucer
+      - name: Setup JUCE and Projucer
+        run: |
+          # Clone JUCE if not cached
+          if [ ! -d "JUCE" ]; then
+            git clone https://github.com/juce-framework/JUCE.git
+            cd JUCE
+            git checkout 7.0.12
+            cd ..
+          fi
+          
+          # Build Projucer if not cached
+          if [ ! -f "JUCE/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer" ]; then
+            cd JUCE/extras/Projucer/Builds/MacOSX
+            xcodebuild -project Projucer.xcodeproj -configuration Release
+            cd ../../../..
+          fi
 
-        # Build the project
-        cd Builds/MacOSX
-        xcodebuild -project Pulse24Sync.xcodeproj -configuration Release -target "Pulse24Sync - VST3" -target "Pulse24Sync - AU"
+      - name: Build macOS
+        run: |
+          # Generate Xcode project with Projucer
+          ./JUCE/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer --resave Pulse24Sync.jucer
+          
+          # Build the project
+          xcodebuild -project Builds/MacOSX/Pulse24Sync.xcodeproj -configuration Release -scheme Pulse24Sync
 
-    - name: Upload macOS build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: macos-builds
-        path: |
-          Builds/MacOSX/build/Release/
-          ~/Library/Audio/Plug-Ins/Components/Pulse24Sync.component
-          ~/Library/Audio/Plug-Ins/VST3/Pulse24Sync.vst3
-        retention-days: 7
+      - name: Upload macOS build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-builds
+          path: Builds/MacOSX/build/Release/
 
   build-windows:
     runs-on: windows-latest
     if: false  # Disabled - set to true to enable
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Cache JUCE
-      uses: actions/cache@v4
-      with:
-        path: |
-          JUCE
-          ${{ env.LOCALAPPDATA }}\JUCE
-        key: ${{ runner.os }}-juce-${{ hashFiles('**/Pulse24Sync.jucer') }}
-        restore-keys: |
-          ${{ runner.os }}-juce-
+      - name: Setup JUCE and Projucer
+        run: |
+          # Clone JUCE if not cached
+          if (!(Test-Path "JUCE")) {
+            git clone https://github.com/juce-framework/JUCE.git
+            cd JUCE
+            git checkout 7.0.12
+            cd ..
+          }
+          
+          # Build Projucer if not cached
+          if (!(Test-Path "JUCE/extras/Projucer/Builds/VisualStudio2022/x64/Release/Projucer.exe")) {
+            cd JUCE/extras/Projucer/Builds/VisualStudio2022
+            msbuild Projucer.sln /p:Configuration=Release /p:Platform=x64
+            cd ../../../..
+          }
 
-    - name: Setup JUCE and Projucer
-      run: |
-        # Download JUCE if not cached
-        if (!(Test-Path "JUCE")) {
-          git clone https://github.com/juce-framework/JUCE.git
-          cd JUCE
-          git checkout 7.0.12
-          cd ..
-        }
+      - name: Build Windows
+        run: |
+          # Generate Visual Studio project with Projucer
+          ./JUCE/extras/Projucer/Builds/VisualStudio2022/x64/Release/Projucer.exe --resave Pulse24Sync.jucer
+          
+          # Build the project
+          msbuild Builds/VisualStudio2022/Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64
 
-        # Build Projucer if not already built
-        if (!(Test-Path "JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\App\Projucer.exe")) {
-          cd JUCE
-          cd extras\Projucer\Builds\VisualStudio2022
-          msbuild Projucer.sln /p:Configuration=Release /p:Platform=x64
-          cd ..\..\..
-        }
-
-    - name: Build Windows with Projucer
-      run: |
-        # Generate Visual Studio project using Projucer
-        .\JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\App\Projucer.exe --resave Pulse24Sync.jucer
-
-        # Build the project
-        cd Builds\VisualStudio2022
-        msbuild Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64
-
-    - name: Upload Windows build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-builds
-        path: |
-          Builds/VisualStudio2022/x64/Release/
-        retention-days: 7
-
-  build-linux:
-    runs-on: ubuntu-24.04
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Build Linux with Docker and Projucer
-      run: |
-        # Create a Dockerfile for the build environment
-        cat > Dockerfile << 'EOF'
-        FROM ubuntu:24.04
-        
-        # Install dependencies
-        RUN apt-get update && apt-get install -y \
-          build-essential \
-          cmake \
-          git \
-          libasound2-dev \
-          libjack-jackd2-dev \
-          libfreetype6-dev \
-          libcurl4-openssl-dev \
-          libwebkit2gtk-4.1-dev \
-          libgtk-3-dev \
-          libx11-dev \
-          libxrandr-dev \
-          libxinerama-dev \
-          libxcursor-dev \
-          libxi-dev \
-          && rm -rf /var/lib/apt/lists/*
-        
-        # Set working directory
-        WORKDIR /workspace
-        
-        # Copy project files
-        COPY . .
-        
-        # Clone JUCE and build Projucer
-        RUN git clone https://github.com/juce-framework/JUCE.git && \
-            cd JUCE && \
-            git checkout 7.0.12 && \
-            cd extras/Projucer/Builds/LinuxMakefile && \
-            make -j$(nproc)
-        
-        # Update project file with correct paths
-        RUN sed -i 's|path="../../../Downloads/JUCE/modules"|path="JUCE/modules"|g' Pulse24Sync.jucer && \
-            sed -i 's|path="../JUCE/modules"|path="JUCE/modules"|g' Pulse24Sync.jucer
-        
-        # Generate project with Projucer
-        RUN ./JUCE/extras/Projucer/Builds/LinuxMakefile/build/Projucer --resave Pulse24Sync.jucer
-        
-        # Build the project
-        RUN cd Builds/LinuxMakefile && make -j$(nproc)
-        
-        # Keep container running to copy artifacts
-        CMD ["tail", "-f", "/dev/null"]
-        EOF
-        
-        # Build and run the Docker container
-        docker build -t pulse24sync-build .
-        docker run -d --name build-container pulse24sync-build tail -f /dev/null
-        
-        # Copy build artifacts from container
-        docker cp build-container:/workspace/Builds/LinuxMakefile/build ./linux-builds
-        
-        # Clean up
-        docker stop build-container
-        docker rm build-container
-
-    - name: Upload Linux build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: linux-builds
-        path: |
-          linux-builds/
-        retention-days: 7
+      - name: Upload Windows build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-builds
+          path: Builds/VisualStudio2022/x64/Release/

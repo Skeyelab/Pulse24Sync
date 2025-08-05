@@ -31,13 +31,34 @@ RUN git clone https://github.com/juce-framework/JUCE.git && \
     cd extras/Projucer/Builds/LinuxMakefile && \
     make -j$(nproc)
 
-# Try a different approach - use the exact same path format but with correct relative path
-# The original paths were relative to the project root, so let's use that
+# Debug: Show directory structure
+RUN echo "=== DIRECTORY STRUCTURE ===" && \
+    pwd && \
+    ls -la && \
+    echo "=== JUCE DIRECTORY ===" && \
+    ls -la JUCE/ && \
+    echo "=== JUCE MODULES ===" && \
+    ls -la JUCE/modules/ && \
+    echo "=== ORIGINAL JUCER PATHS ===" && \
+    grep -n "path=" Pulse24Sync.jucer && \
+    echo "=== MODULEPATHS ===" && \
+    grep -n "<MODULEPATH" Pulse24Sync.jucer
+
+# Update project file with correct paths
 RUN sed -i 's|path="../../../Downloads/JUCE/modules"|path="JUCE/modules"|g' Pulse24Sync.jucer && \
     sed -i 's|path="../JUCE/modules"|path="JUCE/modules"|g' Pulse24Sync.jucer
 
-# Debug: Show what the paths look like after sed
-RUN echo "=== PATHS AFTER SED ===" && grep -n "path=" Pulse24Sync.jucer
+# Debug: Show updated paths
+RUN echo "=== UPDATED JUCER PATHS ===" && \
+    grep -n "path=" Pulse24Sync.jucer && \
+    echo "=== UPDATED MODULEPATHS ===" && \
+    grep -n "<MODULEPATH" Pulse24Sync.jucer
+
+# Debug: Test if paths exist
+RUN echo "=== PATH EXISTENCE TESTS ===" && \
+    ls -la JUCE/modules/ && \
+    echo "Path JUCE/modules exists: $([ -d "JUCE/modules" ] && echo "YES" || echo "NO")" && \
+    echo "Path JUCE/modules/juce_audio_basics exists: $([ -d "JUCE/modules/juce_audio_basics" ] && echo "YES" || echo "NO")"
 
 # Generate project with Projucer
 RUN ./JUCE/extras/Projucer/Builds/LinuxMakefile/build/Projucer --resave Pulse24Sync.jucer

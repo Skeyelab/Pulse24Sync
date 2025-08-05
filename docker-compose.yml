@@ -13,4 +13,4 @@ services:
     command: bash
 
 volumes:
-  pulse24sync-build: 
+  pulse24sync-build:
