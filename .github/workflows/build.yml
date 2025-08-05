@@ -108,6 +108,19 @@ jobs:
         cd extras/Projucer/Builds/LinuxMakefile
         make -j$(nproc)
 
+    - name: Debug directory structure
+      run: |
+        echo "=== Current directory ==="
+        pwd
+        echo "=== Directory listing ==="
+        ls -la
+        echo "=== JUCE directory ==="
+        ls -la JUCE/
+        echo "=== JUCE modules directory ==="
+        ls -la JUCE/modules/
+        echo "=== Expected path from project root ==="
+        ls -la ../../JUCE/modules/ || echo "Path does not exist"
+
     - name: Build Linux with Projucer
       run: |
         # Generate Makefile project using Projucer
