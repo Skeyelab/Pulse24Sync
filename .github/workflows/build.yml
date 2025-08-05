@@ -110,10 +110,6 @@ jobs:
 
     - name: Build Linux with Projucer
       run: |
-        # Create the expected directory structure for JUCE modules
-        mkdir -p ../../../Downloads
-        ln -sf $PWD/JUCE ../../../Downloads/JUCE
-
         # Generate Makefile project using Projucer
         ./JUCE/extras/Projucer/Builds/LinuxMakefile/build/Projucer --resave Pulse24Sync.jucer
 
