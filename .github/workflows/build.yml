@@ -191,6 +191,12 @@ jobs:
         sed -i "s|path=\"../JUCE/modules\"|path=\"$JUCE_PATH\"|g" Pulse24Sync.jucer
         echo "Updated JUCE module paths to: $JUCE_PATH"
 
+        # Debug: Show what the paths look like now
+        echo "=== Checking if sed worked ==="
+        grep -n "path=" Pulse24Sync.jucer | grep JUCE
+        echo "=== Verifying the path exists ==="
+        ls -la "$JUCE_PATH"
+
     - name: Build Linux with Projucer
       run: |
         # Generate Makefile project using Projucer
