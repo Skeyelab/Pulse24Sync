@@ -155,8 +155,8 @@ jobs:
         run: |
           echo "Building Pulse24Sync plugin..."
 
-          # Build the project
-          xcodebuild -project Builds/MacOSX/Pulse24Sync.xcodeproj -configuration Release -scheme Pulse24Sync
+          # Build the project using the correct scheme name
+          xcodebuild -project Builds/MacOSX/Pulse24Sync.xcodeproj -configuration Release -scheme "Pulse24Sync - All"
 
           if [ $? -ne 0 ]; then
             echo "Build failed"
