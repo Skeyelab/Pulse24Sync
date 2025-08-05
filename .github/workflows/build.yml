@@ -123,11 +123,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup JUCE and Projucer
-        shell: powershell
+        shell: powershell -ExecutionPolicy Bypass
         run: |
-          # Set execution policy to allow scripts
-          Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-          
           # Use pre-installed JUCE at c:\JUCE
           Write-Host "Using pre-installed JUCE at c:\JUCE"
 
@@ -175,11 +172,8 @@ jobs:
           Write-Host "Project files generated successfully"
 
       - name: Build Windows Plugin
-        shell: powershell
+        shell: powershell -ExecutionPolicy Bypass
         run: |
-          # Set execution policy to allow scripts
-          Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-          
           Write-Host "Building Pulse24Sync plugin..."
 
           # Build the project
