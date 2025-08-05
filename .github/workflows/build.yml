@@ -125,30 +125,71 @@ jobs:
       - name: Setup JUCE and Projucer
         shell: pwsh
         run: |
-          # Clone JUCE if not cached
-          if (!(Test-Path "JUCE")) {
-            git clone https://github.com/juce-framework/JUCE.git
-            cd JUCE
-            git checkout 7.0.12
-            cd ..
+          # Use pre-installed JUCE at c:\JUCE
+          Write-Host "Using pre-installed JUCE at c:\JUCE"
+
+          # Check if Projucer exists at the expected location
+          $projucerPath = "c:\JUCE\Projucer.exe"
+          if (Test-Path $projucerPath) {
+            Write-Host "Found Projucer at: $projucerPath"
+          } else {
+            # Try alternative locations
+            $alternativePaths = @(
+              "c:\JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\Projucer.exe",
+              "c:\Program Files\JUCE\Projucer.exe",
+              "c:\Program Files (x86)\JUCE\Projucer.exe"
+            )
+
+            foreach ($path in $alternativePaths) {
+              if (Test-Path $path) {
+                $projucerPath = $path
+                Write-Host "Found Projucer at: $projucerPath"
+                break
+              }
+            }
           }
 
-          # Build Projucer if not cached
-          if (!(Test-Path "JUCE/extras/Projucer/Builds/VisualStudio2022/x64/Release/Projucer.exe")) {
-            cd JUCE/extras/Projucer/Builds/VisualStudio2022
-            msbuild Projucer.sln /p:Configuration=Release /p:Platform=x64
-            cd ..
-            cd ..
+          if (!(Test-Path $projucerPath)) {
+            Write-Error "Projucer not found. Please ensure JUCE is installed at c:\JUCE"
+            exit 1
           }
 
           # Generate Visual Studio project with Projucer
-          ./JUCE/extras/Projucer/Builds/VisualStudio2022/x64/Release/Projucer.exe --resave Pulse24Sync.jucer
+          Write-Host "Generating Visual Studio project files..."
+          & $projucerPath --resave Pulse24Sync.jucer
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to generate project files with Projucer"
+            exit 1
+          }
+
+          # Verify project files were created
+          if (!(Test-Path "Builds\VisualStudio2022\Pulse24Sync.sln")) {
+            Write-Error "Visual Studio solution file was not created"
+            exit 1
+          }
+
+          Write-Host "Project files generated successfully"
+
+      - name: Build Windows Plugin
+        shell: pwsh
+        run: |
+          Write-Host "Building Pulse24Sync plugin..."
 
           # Build the project
-          msbuild Builds/VisualStudio2022/Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64
+          msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /m
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Build failed"
+            exit 1
+          }
+
+          Write-Host "Build completed successfully"
 
       - name: Upload Windows build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-builds
-          path: Builds/VisualStudio2022/x64/Release/
+          path: |
+            Builds/VisualStudio2022/x64/Release/
+            Builds/VisualStudio2022/build/Release/
