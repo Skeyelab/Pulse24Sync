@@ -40,7 +40,7 @@ juce_add_plugin(Pulse24Sync
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT TRUE
     IS_MIDI_EFFECT FALSE
-    EDITOR_REQUIRES_KEYBOARD_FOCUS FALSE
+    EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     VST3_CATEGORIES "Fx"
     AU_MAIN_TYPE "kAudioUnitType_Effect"
     COPY_PLUGIN_AFTER_BUILD TRUE
@@ -52,6 +52,14 @@ target_sources(Pulse24Sync
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
         Source/PulseGenerator.cpp
+)
+
+# Add JUCE modules
+target_compile_definitions(Pulse24Sync
+    PUBLIC
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_VST3_CAN_REPLACE_VST2=0
 )
 
 # Link JUCE modules
@@ -69,36 +77,49 @@ target_link_libraries(Pulse24Sync
         juce::juce_graphics
         juce::juce_gui_basics
         juce::juce_gui_extra
+    PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags
 )
 
-# Set include directories
-target_include_directories(Pulse24Sync
-    PRIVATE
-        Source
-)
-
-# Platform-specific settings
+# Linux-specific configurations
 if(UNIX AND NOT APPLE)
-    # Linux-specific settings
     find_package(PkgConfig REQUIRED)
+    
+    # Find audio systems
     pkg_check_modules(ALSA REQUIRED alsa)
     pkg_check_modules(JACK REQUIRED jack)
-
-    target_link_libraries(Pulse24Sync
-        PRIVATE
-            ${ALSA_LIBRARIES}
-            ${JACK_LIBRARIES}
+    
+    # Find GUI libraries
+    pkg_check_modules(FREETYPE REQUIRED freetype2)
+    pkg_check_modules(GL REQUIRED gl)
+    pkg_check_modules(CURL REQUIRED libcurl)
+    
+    # Add include directories
+    target_include_directories(Pulse24Sync PRIVATE
+        ${ALSA_INCLUDE_DIRS}
+        ${JACK_INCLUDE_DIRS}
+        ${FREETYPE_INCLUDE_DIRS}
+        ${GL_INCLUDE_DIRS}
+        ${CURL_INCLUDE_DIRS}
     )
-
-    target_include_directories(Pulse24Sync
-        PRIVATE
-            ${ALSA_INCLUDE_DIRS}
-            ${JACK_INCLUDE_DIRS}
+    
+    # Add link libraries
+    target_link_libraries(Pulse24Sync PRIVATE
+        ${ALSA_LIBRARIES}
+        ${JACK_LIBRARIES}
+        ${FREETYPE_LIBRARIES}
+        ${GL_LIBRARIES}
+        ${CURL_LIBRARIES}
     )
-
-    target_compile_options(Pulse24Sync
-        PRIVATE
-            ${ALSA_CFLAGS_OTHER}
-            ${JACK_CFLAGS_OTHER}
+    
+    # Add compile flags
+    target_compile_options(Pulse24Sync PRIVATE
+        ${ALSA_CFLAGS_OTHER}
+        ${JACK_CFLAGS_OTHER}
+        ${FREETYPE_CFLAGS_OTHER}
+        ${GL_CFLAGS_OTHER}
+        ${CURL_CFLAGS_OTHER}
     )
 endif()
