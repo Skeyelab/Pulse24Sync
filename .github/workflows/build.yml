@@ -183,6 +183,14 @@ jobs:
           echo "Projucer already built (cached)"
         fi
 
+    - name: Update project file with absolute paths
+      run: |
+        # Create a temporary project file with absolute paths for CI
+        cp Pulse24Sync.jucer Pulse24Sync.jucer.backup
+        JUCE_PATH=$(pwd)/JUCE/modules
+        sed -i "s|path=\"../JUCE/modules\"|path=\"$JUCE_PATH\"|g" Pulse24Sync.jucer
+        echo "Updated JUCE module paths to: $JUCE_PATH"
+
     - name: Build Linux with Projucer
       run: |
         # Generate Makefile project using Projucer
@@ -191,6 +199,11 @@ jobs:
         # Build the project
         cd Builds/LinuxMakefile
         make -j$(nproc)
+
+    - name: Restore project file
+      run: |
+        # Restore the original project file
+        mv Pulse24Sync.jucer.backup Pulse24Sync.jucer
 
     - name: Upload Linux build artifacts
       uses: actions/upload-artifact@v4
