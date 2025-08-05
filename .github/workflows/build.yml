@@ -82,33 +82,88 @@ jobs:
 
   build-macos:
     runs-on: macOS
-    if: true  # Disabled - set to true to enable
+    if: true  # Enabled for macOS builds
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup JUCE and Projucer
         run: |
-          # Clone JUCE if not cached
-          if [ ! -d "JUCE" ]; then
-            git clone https://github.com/juce-framework/JUCE.git
-            cd JUCE
-            git checkout 7.0.12
-            cd ..
+          # Use pre-installed JUCE at /Applications/JUCE 2
+          JUCE_PATH="/Applications/JUCE 2"
+
+          if [ ! -d "$JUCE_PATH" ]; then
+            echo "Error: JUCE not found at $JUCE_PATH"
+            exit 1
           fi
 
-          # Build Projucer if not cached
-          if [ ! -f "JUCE/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer" ]; then
-            cd JUCE/extras/Projucer/Builds/MacOSX
-            xcodebuild -project Projucer.xcodeproj -configuration Release
-            cd ../../..
+          echo "Using JUCE from: $JUCE_PATH"
+
+          # Look for Projucer in the expected location
+          PROJUCER_PATH="$JUCE_PATH/Projucer.app/Contents/MacOS/Projucer"
+
+          if [ ! -f "$PROJUCER_PATH" ]; then
+            # Try alternative locations
+            ALTERNATIVE_PATHS=(
+              "$JUCE_PATH/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer"
+              "$JUCE_PATH/extras/Projucer/Builds/MacOSX/Projucer.app/Contents/MacOS/Projucer"
+              "/Applications/Projucer.app/Contents/MacOS/Projucer"
+            )
+
+            for path in "${ALTERNATIVE_PATHS[@]}"; do
+              if [ -f "$path" ]; then
+                PROJUCER_PATH="$path"
+                echo "Found Projucer at: $PROJUCER_PATH"
+                break
+              fi
+            done
           fi
+
+          if [ ! -f "$PROJUCER_PATH" ]; then
+            echo "Error: Projucer not found. Searched in:"
+            echo "  $JUCE_PATH/Projucer.app/Contents/MacOS/Projucer"
+            echo "  $JUCE_PATH/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer"
+            echo "  $JUCE_PATH/extras/Projucer/Builds/MacOSX/Projucer.app/Contents/MacOS/Projucer"
+            echo "  /Applications/Projucer.app/Contents/MacOS/Projucer"
+            exit 1
+          fi
+
+          echo "Using Projucer from: $PROJUCER_PATH"
 
           # Generate Xcode project with Projucer
-          ./JUCE/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer --resave Pulse24Sync.jucer
+          echo "Generating Xcode project files..."
+          "$PROJUCER_PATH" --resave Pulse24Sync.jucer
+
+          # Give Projucer time to finish writing files
+          sleep 3
+
+          # Check if project files were created
+          if [ ! -d "Builds/MacOSX" ]; then
+            echo "Error: Xcode project files were not created"
+            echo "Contents of current directory:"
+            ls -la
+            if [ -d "Builds" ]; then
+              echo "Contents of Builds directory:"
+              ls -la Builds/
+            fi
+            exit 1
+          fi
+
+          echo "Project files generated successfully"
+
+      - name: Build macOS Plugin
+        run: |
+          echo "Building Pulse24Sync plugin..."
 
           # Build the project
           xcodebuild -project Builds/MacOSX/Pulse24Sync.xcodeproj -configuration Release -scheme Pulse24Sync
+
+          if [ $? -ne 0 ]; then
+            echo "Build failed"
+            exit 1
+          fi
+
+          echo "Build completed successfully"
 
       - name: Upload macOS build artifacts
         uses: actions/upload-artifact@v4
