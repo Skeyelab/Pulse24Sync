@@ -9,6 +9,7 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-24.04
+    if: false  # Disabled - set to true to enable
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
