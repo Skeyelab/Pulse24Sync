@@ -198,6 +198,12 @@ jobs:
         grep -n "path=" Pulse24Sync.jucer | grep JUCE
         echo "=== Verifying the path exists ==="
         ls -la "$JUCE_PATH"
+        
+        # Additional debugging: Check for any other module paths
+        echo "=== All module paths in project file ==="
+        grep -n "path=" Pulse24Sync.jucer
+        echo "=== Project file structure ==="
+        grep -n "<MODULEPATH" Pulse24Sync.jucer
 
     - name: Build Linux with Projucer
       run: |
