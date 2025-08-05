@@ -201,22 +201,22 @@ jobs:
           Write-Host "Project files generated successfully"
 
       - name: Build Windows Plugin
-        shell: powershell
+        shell: cmd
         run: |
-          # Set execution policy and run our script
-          Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-
-          Write-Host "Building Pulse24Sync plugin..."
-
-          # Build the project
+          echo Building Pulse24Sync plugin...
+          
+          REM Use Visual Studio Developer Command Prompt to access MSBuild
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+          
+          REM Build the project
           msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /m
-
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Build failed"
-            exit 1
-          }
-
-          Write-Host "Build completed successfully"
+          
+          if %ERRORLEVEL% neq 0 (
+            echo Build failed
+            exit /b 1
+          )
+          
+          echo Build completed successfully
 
       - name: Upload Windows build artifacts
         uses: actions/upload-artifact@v4
