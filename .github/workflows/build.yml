@@ -128,7 +128,7 @@ jobs:
         run: |
           # Set execution policy and run our script
           Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-          
+
           # Use pre-installed JUCE at c:\JUCE
           Write-Host "Using pre-installed JUCE at c:\JUCE"
 
@@ -161,19 +161,44 @@ jobs:
           # Generate Visual Studio project with Projucer
           Write-Host "Generating Visual Studio project files..."
           & $projucerPath --resave Pulse24Sync.jucer
-          
+
           # Note: Projucer may return non-zero exit code even on success
           # So we check if files were actually created instead
-          Write-Host "Projucer completed. Checking if files were created..."
+          Write-Host "Projucer completed. Waiting for files to be written..."
 
-          # Verify project files were created
-          if (!(Test-Path "Builds\VisualStudio2022\Pulse24Sync.sln")) {
+          # Give Projucer time to finish writing files
+          Start-Sleep -Seconds 3
+
+          Write-Host "Checking if files were created..."
+
+          # Check multiple possible locations for the solution file
+          $possiblePaths = @(
+            "Builds\VisualStudio2022\Pulse24Sync.sln",
+            "Builds\VisualStudio2022\x64\Release\Pulse24Sync.sln",
+            "Builds\VisualStudio2022\Release\Pulse24Sync.sln"
+          )
+
+          $solutionFound = $false
+          foreach ($path in $possiblePaths) {
+            if (Test-Path $path) {
+              Write-Host "Found Visual Studio solution at: $path"
+              $solutionFound = $true
+              break
+            }
+          }
+
+          if (!$solutionFound) {
+            Write-Host "Checking what files were actually created in Builds directory:"
+            if (Test-Path "Builds") {
+              Get-ChildItem -Path "Builds" -Recurse -Name | Write-Host
+            } else {
+              Write-Host "Builds directory does not exist"
+            }
             Write-Error "Visual Studio solution file was not created"
             exit 1
           }
 
           Write-Host "Project files generated successfully"
-          Write-Host "Visual Studio solution: Builds\VisualStudio2022\Pulse24Sync.sln"
 
       - name: Build Windows Plugin
         shell: powershell
