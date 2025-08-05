@@ -97,11 +97,24 @@ jobs:
           libfreetype6-dev libcurl4-openssl-dev libwebkit2gtk-4.1-dev libgtk-3-dev \
           libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
 
-    - name: Build Linux with CMake
+    - name: Setup JUCE and Projucer
       run: |
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXTRAS=OFF -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_BUILD_TOOLS=OFF
+        # Download JUCE
+        git clone https://github.com/juce-framework/JUCE.git
+        cd JUCE
+        git checkout 7.0.12
+
+        # Build Projucer
+        cd extras/Projucer/Builds/LinuxMakefile
+        make -j$(nproc)
+
+    - name: Build Linux with Projucer
+      run: |
+        # Generate Makefile project using Projucer
+        ./JUCE/extras/Projucer/Builds/LinuxMakefile/build/Projucer --resave Pulse24Sync.jucer
+
+        # Build the project
+        cd Builds/LinuxMakefile
         make -j$(nproc)
 
     - name: Upload Linux build artifacts
@@ -109,5 +122,5 @@ jobs:
       with:
         name: linux-builds
         path: |
-          build/Pulse24Sync_artefacts/Release/
+          Builds/LinuxMakefile/build/
         retention-days: 7

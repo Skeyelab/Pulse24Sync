@@ -86,16 +86,16 @@ target_link_libraries(Pulse24Sync
 # Linux-specific configurations
 if(UNIX AND NOT APPLE)
     find_package(PkgConfig REQUIRED)
-    
+
     # Find audio systems
     pkg_check_modules(ALSA REQUIRED alsa)
     pkg_check_modules(JACK REQUIRED jack)
-    
+
     # Find GUI libraries
     pkg_check_modules(FREETYPE REQUIRED freetype2)
     pkg_check_modules(GL REQUIRED gl)
     pkg_check_modules(CURL REQUIRED libcurl)
-    
+
     # Add include directories
     target_include_directories(Pulse24Sync PRIVATE
         ${ALSA_INCLUDE_DIRS}
@@ -104,7 +104,7 @@ if(UNIX AND NOT APPLE)
         ${GL_INCLUDE_DIRS}
         ${CURL_INCLUDE_DIRS}
     )
-    
+
     # Add link libraries
     target_link_libraries(Pulse24Sync PRIVATE
         ${ALSA_LIBRARIES}
@@ -113,7 +113,7 @@ if(UNIX AND NOT APPLE)
         ${GL_LIBRARIES}
         ${CURL_LIBRARIES}
     )
-    
+
     # Add compile flags
     target_compile_options(Pulse24Sync PRIVATE
         ${ALSA_CFLAGS_OTHER}
