@@ -128,7 +128,7 @@ jobs:
         run: |
           # Set execution policy and run our script
           Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-
+          
           # Use pre-installed JUCE at c:\JUCE
           Write-Host "Using pre-installed JUCE at c:\JUCE"
 
@@ -161,11 +161,10 @@ jobs:
           # Generate Visual Studio project with Projucer
           Write-Host "Generating Visual Studio project files..."
           & $projucerPath --resave Pulse24Sync.jucer
-
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to generate project files with Projucer"
-            exit 1
-          }
+          
+          # Note: Projucer may return non-zero exit code even on success
+          # So we check if files were actually created instead
+          Write-Host "Projucer completed. Checking if files were created..."
 
           # Verify project files were created
           if (!(Test-Path "Builds\VisualStudio2022\Pulse24Sync.sln")) {
@@ -174,6 +173,7 @@ jobs:
           }
 
           Write-Host "Project files generated successfully"
+          Write-Host "Visual Studio solution: Builds\VisualStudio2022\Pulse24Sync.sln"
 
       - name: Build Windows Plugin
         shell: powershell
