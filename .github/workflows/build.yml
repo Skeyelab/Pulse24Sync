@@ -122,45 +122,72 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Cache JUCE and dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          JUCE
-          ~/.cache/juce
-          /usr/local/lib
-          /usr/local/include
-        key: ${{ runner.os }}-juce-deps-${{ hashFiles('**/Pulse24Sync.jucer') }}
-        restore-keys: |
-          ${{ runner.os }}-juce-deps-
-
-    - name: Install dependencies
+    - name: Build Linux with Docker and Projucer
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential cmake libasound2-dev libjack-jackd2-dev \
-          libfreetype6-dev libcurl4-openssl-dev libwebkit2gtk-4.1-dev libgtk-3-dev \
-          libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
-
-    - name: Build Linux with CMake
-      run: |
-        # Create build directory
-        mkdir -p build
-        cd build
-
-        # Configure with CMake
-        cmake .. -DCMAKE_BUILD_TYPE=Release \
-          -DJUCE_BUILD_EXTRAS=OFF \
-          -DJUCE_BUILD_EXAMPLES=OFF \
-          -DJUCE_ENABLE_MODULE_SOURCE_GROUPS=ON \
-          -DCMAKE_OSX_DEPLOYMENT_TARGET="13.0"
-
+        # Create a Dockerfile for the build environment
+        cat > Dockerfile << 'EOF'
+        FROM ubuntu:24.04
+        
+        # Install dependencies
+        RUN apt-get update && apt-get install -y \
+          build-essential \
+          cmake \
+          git \
+          libasound2-dev \
+          libjack-jackd2-dev \
+          libfreetype6-dev \
+          libcurl4-openssl-dev \
+          libwebkit2gtk-4.1-dev \
+          libgtk-3-dev \
+          libx11-dev \
+          libxrandr-dev \
+          libxinerama-dev \
+          libxcursor-dev \
+          libxi-dev \
+          && rm -rf /var/lib/apt/lists/*
+        
+        # Set working directory
+        WORKDIR /workspace
+        
+        # Copy project files
+        COPY . .
+        
+        # Clone JUCE and build Projucer
+        RUN git clone https://github.com/juce-framework/JUCE.git && \
+            cd JUCE && \
+            git checkout 7.0.12 && \
+            cd extras/Projucer/Builds/LinuxMakefile && \
+            make -j$(nproc)
+        
+        # Update project file with correct paths
+        RUN sed -i 's|path="../../../Downloads/JUCE/modules"|path="JUCE/modules"|g' Pulse24Sync.jucer && \
+            sed -i 's|path="../JUCE/modules"|path="JUCE/modules"|g' Pulse24Sync.jucer
+        
+        # Generate project with Projucer
+        RUN ./JUCE/extras/Projucer/Builds/LinuxMakefile/build/Projucer --resave Pulse24Sync.jucer
+        
         # Build the project
-        make -j$(nproc)
+        RUN cd Builds/LinuxMakefile && make -j$(nproc)
+        
+        # Keep container running to copy artifacts
+        CMD ["tail", "-f", "/dev/null"]
+        EOF
+        
+        # Build and run the Docker container
+        docker build -t pulse24sync-build .
+        docker run -d --name build-container pulse24sync-build tail -f /dev/null
+        
+        # Copy build artifacts from container
+        docker cp build-container:/workspace/Builds/LinuxMakefile/build ./linux-builds
+        
+        # Clean up
+        docker stop build-container
+        docker rm build-container
 
     - name: Upload Linux build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: linux-builds
         path: |
-          build/
+          linux-builds/
         retention-days: 7
