@@ -14,7 +14,8 @@
               pluginRTASCategory="" aaxIdentifier="com.ericdahl.dev.Pulse24Sync"
               headerPath="" libraryPath="" customXcodeFlags="" postbuildCommand=""
               defines="" headerSearchPaths="" librarySearchPaths="" fastMath="0"
-              linkTimeOptimisation="0" stripLocalSymbols="0" pluginFormats="buildVST3,buildAU,buildStandalone">
+              linkTimeOptimisation="0" stripLocalSymbols="0" pluginFormats="buildVST3,buildAU,buildStandalone"
+              version="1.0.0">
   <MAINGROUP id="FWjK9Z" name="Pulse24Sync">
     <GROUP id="{0DA0E2A3-71C0-CECF-6C80-83E2FD049B35}" name="Source">
       <FILE id="saVNgR" name="PluginProcessor.cpp" compile="1" resource="0"

@@ -3,152 +3,277 @@ name: Create Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*'  # Trigger on version tags like v1.0.0, v1.2.3, etc.
 
 jobs:
-  build-macos:
-    runs-on: macos-latest
+  build-and-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS, windows-latest]
+        include:
+          - os: macOS
+            artifact-name: macos-builds
+            build-path: Builds/MacOSX/build/Release/
+          - os: windows-latest
+            artifact-name: windows-builds
+            build-path: |
+              Builds/VisualStudio2022/x64/Release/
+              Builds/VisualStudio2022/build/Release/
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup JUCE
-      run: |
-        git clone https://github.com/juce-framework/JUCE.git
-        cd JUCE
-        git checkout 6.1.6
+      - name: Setup JUCE and Projucer (macOS)
+        if: matrix.os == 'macOS'
+        run: |
+          # Use pre-installed JUCE at /Applications/JUCE 2
+          JUCE_PATH="/Applications/JUCE 2"
 
-    - name: Build macOS
-      run: |
-        cd ..
-        xcodebuild -project Builds/MacOSX/Pulse24Sync.xcodeproj -configuration Release
+          if [ ! -d "$JUCE_PATH" ]; then
+            echo "Error: JUCE not found at $JUCE_PATH"
+            exit 1
+          fi
 
-    - name: Package macOS Assets
-      run: |
-        mkdir -p releases
-        cd "/Users/runner/Library/Audio/Plug-Ins/Components"
-        zip -r "../../releases/Pulse24Sync-AU-macOS-${{ github.ref_name }}.zip" Pulse24Sync.component || true
-        cd "/Users/runner/Library/Audio/Plug-Ins/VST3"
-        zip -r "../../releases/Pulse24Sync-VST3-macOS-${{ github.ref_name }}.zip" Pulse24Sync.vst3 || true
-        cd "Builds/MacOSX/build/Release"
-        zip -r "../../../releases/Pulse24Sync-Standalone-macOS-${{ github.ref_name }}.zip" Pulse24Sync.app || true
+          echo "Using JUCE from: $JUCE_PATH"
 
-    - name: Upload macOS artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: macos-builds
-        path: releases/
-        retention-days: 1
+          # Look for Projucer in the expected location
+          PROJUCER_PATH="$JUCE_PATH/Projucer.app/Contents/MacOS/Projucer"
 
-  build-windows:
-    runs-on: windows-latest
+          if [ ! -f "$PROJUCER_PATH" ]; then
+            # Try alternative locations
+            ALTERNATIVE_PATHS=(
+              "$JUCE_PATH/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer"
+              "$JUCE_PATH/extras/Projucer/Builds/MacOSX/Projucer.app/Contents/MacOS/Projucer"
+              "/Applications/Projucer.app/Contents/MacOS/Projucer"
+            )
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+            for path in "${ALTERNATIVE_PATHS[@]}"; do
+              if [ -f "$path" ]; then
+                PROJUCER_PATH="$path"
+                echo "Found Projucer at: $PROJUCER_PATH"
+                break
+              fi
+            done
+          fi
 
-    - name: Setup JUCE
-      run: |
-        git clone https://github.com/juce-framework/JUCE.git
-        cd JUCE
-        git checkout 6.1.6
+          if [ ! -f "$PROJUCER_PATH" ]; then
+            echo "Error: Projucer not found. Searched in:"
+            echo "  $JUCE_PATH/Projucer.app/Contents/MacOS/Projucer"
+            echo "  $JUCE_PATH/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer"
+            echo "  $JUCE_PATH/extras/Projucer/Builds/MacOSX/Projucer.app/Contents/MacOS/Projucer"
+            echo "  /Applications/Projucer.app/Contents/MacOS/Projucer"
+            exit 1
+          fi
 
-    - name: Build Windows VST3
-      run: |
-        cd ..
-        msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=true /m
+          echo "Using Projucer from: $PROJUCER_PATH"
 
-    - name: Build Windows Standalone
-      run: |
-        msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=true /m /t:Pulse24Sync_StandalonePlugin
+          # Generate Xcode project with Projucer
+          echo "Generating Xcode project files..."
+          "$PROJUCER_PATH" --resave Pulse24Sync.jucer
 
-    - name: Package Windows Assets
-      run: |
-        mkdir -p releases
-        cd "Builds\VisualStudio2022\build\Release"
-        if exist "Pulse24Sync.vst3" (
-          powershell Compress-Archive -Path "Pulse24Sync.vst3" -DestinationPath "..\..\..\releases\Pulse24Sync-VST3-Windows-${{ github.ref_name }}.zip"
-        )
-        if exist "Pulse24Sync.exe" (
-          powershell Compress-Archive -Path "Pulse24Sync.exe" -DestinationPath "..\..\..\releases\Pulse24Sync-Standalone-Windows-${{ github.ref_name }}.zip"
-        )
+          # Give Projucer time to finish writing files
+          sleep 3
 
-    - name: Upload Windows artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-builds
-        path: releases/
-        retention-days: 1
+          # Check if project files were created
+          if [ ! -d "Builds/MacOSX" ]; then
+            echo "Error: Xcode project files were not created"
+            exit 1
+          fi
+
+          echo "Project files generated successfully"
+
+      - name: Setup JUCE and Projucer (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          # Set execution policy and run our script
+          Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+
+          # Use pre-installed JUCE at c:\JUCE
+          Write-Host "Using pre-installed JUCE at c:\JUCE"
+
+          # Check if Projucer exists at the expected location
+          $projucerPath = "c:\JUCE\Projucer.exe"
+          if (Test-Path $projucerPath) {
+            Write-Host "Found Projucer at: $projucerPath"
+          } else {
+            # Try alternative locations
+            $alternativePaths = @(
+              "c:\JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\Projucer.exe",
+              "c:\Program Files\JUCE\Projucer.exe",
+              "c:\Program Files (x86)\JUCE\Projucer.exe"
+            )
+
+            foreach ($path in $alternativePaths) {
+              if (Test-Path $path) {
+                $projucerPath = $path
+                Write-Host "Found Projucer at: $projucerPath"
+                break
+              }
+            }
+          }
+
+          if (!(Test-Path $projucerPath)) {
+            Write-Error "Projucer not found. Please ensure JUCE is installed at c:\JUCE"
+            exit 1
+          }
+
+          # Generate Visual Studio project with Projucer
+          Write-Host "Generating Visual Studio project files..."
+          & $projucerPath --resave Pulse24Sync.jucer
+
+          # Give Projucer time to finish writing files
+          Start-Sleep -Seconds 3
+
+          # Check if files were created
+          $possiblePaths = @(
+            "Builds\VisualStudio2022\Pulse24Sync.sln",
+            "Builds\VisualStudio2022\x64\Release\Pulse24Sync.sln",
+            "Builds\VisualStudio2022\Release\Pulse24Sync.sln"
+          )
+
+          $solutionFound = $false
+          foreach ($path in $possiblePaths) {
+            if (Test-Path $path) {
+              Write-Host "Found Visual Studio solution at: $path"
+              $solutionFound = $true
+              break
+            }
+          }
+
+          if (!$solutionFound) {
+            Write-Error "Visual Studio solution file was not created"
+            exit 1
+          }
+
+          Write-Host "Project files generated successfully"
+
+      - name: Build macOS Plugin
+        if: matrix.os == 'macOS'
+        run: |
+          echo "Building Pulse24Sync plugin..."
+
+          # Build the project using the correct scheme name
+          xcodebuild -project Builds/MacOSX/Pulse24Sync.xcodeproj -configuration Release -scheme "Pulse24Sync - All"
+
+          if [ $? -ne 0 ]; then
+            echo "Build failed"
+            exit 1
+          fi
+
+          echo "Build completed successfully"
+
+      - name: Build Windows Plugin
+        if: matrix.os == 'windows-latest'
+        shell: cmd
+        run: |
+          echo Building Pulse24Sync plugin...
+
+          REM Use Visual Studio Developer Command Prompt to access MSBuild
+          call "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat"
+
+          REM Build the project
+          msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /m
+
+          if %ERRORLEVEL% neq 0 (
+            echo Build failed
+            exit /b 1
+          )
+
+          echo Build completed successfully
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.build-path }}
 
   create-release:
-    needs: [build-macos, build-windows]
+    needs: build-and-release
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Download macOS artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: macos-builds
-        path: releases
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
-    - name: Download Windows artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: windows-builds
-        path: releases
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## Pulse24Sync ${{ github.ref_name }}
 
-    - name: Create Source Archive
-      run: |
-        git archive --format=zip --output=releases/Pulse24Sync-Source-${{ github.ref_name }}.zip HEAD
+            ### Downloads
+            - **macOS**: VST3, Audio Unit, and Standalone versions
+            - **Windows**: VST3 and Standalone versions
 
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          releases/Pulse24Sync-AU-macOS-${{ github.ref_name }}.zip
-          releases/Pulse24Sync-VST3-macOS-${{ github.ref_name }}.zip
-          releases/Pulse24Sync-Standalone-macOS-${{ github.ref_name }}.zip
-          releases/Pulse24Sync-VST3-Windows-${{ github.ref_name }}.zip
-          releases/Pulse24Sync-Standalone-Windows-${{ github.ref_name }}.zip
-          releases/Pulse24Sync-Source-${{ github.ref_name }}.zip
-        draft: false
-        prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-        generate_release_notes: false
-        body: |
-          ## Pulse24Sync ${{ github.ref_name }}
+            ### Installation
+            - **macOS**: Copy the .vst3, .component, or .app files to your respective plugin directories
+            - **Windows**: Copy the .vst3 files to your VST3 directory
 
-          ### 🎉 Release
-          - Complete VST3 and AU plugin implementation
-          - 24 pulses per quarter note with tempo synchronization
-          - Cross-platform support (macOS and Windows)
-          - Modern dark theme UI with parameter automation
+            ### Changes
+            See the [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref }}) for detailed changes.
+          draft: false
+          prerelease: false
 
-          ### 🔧 Features
-          - **Tempo Sync**: Automatic synchronization with host tempo
-          - **Pulse Generation**: Exactly 24 pulses per quarter note
-          - **Parameter Controls**: Volume, pulse width, and enable/disable
-          - **Real-time Processing**: Zero latency audio processing
-          - **Cross-platform**: macOS (AU/VST3) and Windows (VST3)
+      - name: Upload macOS Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/macos-builds/Pulse24Sync.vst3
+          asset_name: Pulse24Sync-macOS-vst3.zip
+          asset_content_type: application/zip
 
-          ### 🚀 Installation
-          1. Download the appropriate plugin for your platform
-          2. Extract the archive
-          3. Copy to your DAW's plugin directory:
-             - **macOS AU**: `/Library/Audio/Plug-Ins/Components/`
-             - **macOS VST3**: `/Library/Audio/Plug-Ins/VST3/`
-             - **Windows VST3**: `C:\Program Files\Common Files\VST3\`
-          4. Restart your DAW and scan for new plugins
+      - name: Upload macOS Audio Unit
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/macos-builds/Pulse24Sync.component
+          asset_name: Pulse24Sync-macOS-au.zip
+          asset_content_type: application/zip
 
-          ### 📋 System Requirements
-          - **macOS**: 10.13+ (Intel/Apple Silicon)
-          - **Windows**: Windows 10+ (64-bit)
-          - **DAW**: Any VST3 or AU compatible host
+      - name: Upload macOS Standalone
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/macos-builds/Pulse24Sync.app
+          asset_name: Pulse24Sync-macOS-standalone.zip
+          asset_content_type: application/zip
 
-          ### 🙏 Acknowledgments
-          Inspired by a request from Zac Caruso in the Synthesizer Zone Facebook group.
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Windows VST3
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/windows-builds/Pulse24Sync.vst3
+          asset_name: Pulse24Sync-Windows-vst3.zip
+          asset_content_type: application/zip
+
+      - name: Upload Windows Standalone
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./artifacts/windows-builds/Pulse24Sync.exe
+          asset_name: Pulse24Sync-Windows-standalone.zip
+          asset_content_type: application/zip
