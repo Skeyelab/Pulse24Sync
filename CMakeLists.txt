@@ -62,6 +62,9 @@ target_compile_definitions(Pulse24Sync
         JUCE_VST3_CAN_REPLACE_VST2=0
 )
 
+# Generate JuceHeader.h
+juce_generate_juce_header(Pulse24Sync)
+
 # Link JUCE modules
 target_link_libraries(Pulse24Sync
     PRIVATE
