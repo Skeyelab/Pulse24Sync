@@ -58,6 +58,13 @@ jobs:
           # Debug: Show what the paths look like after sed
           RUN echo "=== PATHS AFTER SED ===" && grep -n "path=" Pulse24Sync.jucer
           
+          # Debug: Check if the path actually exists
+          RUN echo "=== PATH EXISTS CHECK ===" && \
+              pwd && \
+              ls -la && \
+              echo "JUCE modules exist:" && ls -la JUCE/modules/ && \
+              echo "Testing relative path:" && ls -la JUCE/modules/juce_core/
+          
           # Generate project with Projucer
           RUN ./JUCE/extras/Projucer/Builds/LinuxMakefile/build/Projucer --resave Pulse24Sync.jucer
           
@@ -101,19 +108,17 @@ jobs:
             git checkout 7.0.12
             cd ..
           fi
-          
+
           # Build Projucer if not cached
           if [ ! -f "JUCE/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer" ]; then
             cd JUCE/extras/Projucer/Builds/MacOSX
             xcodebuild -project Projucer.xcodeproj -configuration Release
-            cd ../../../..
+            cd ../../..
           fi
 
-      - name: Build macOS
-        run: |
           # Generate Xcode project with Projucer
           ./JUCE/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer --resave Pulse24Sync.jucer
-          
+
           # Build the project
           xcodebuild -project Builds/MacOSX/Pulse24Sync.xcodeproj -configuration Release -scheme Pulse24Sync
 
@@ -131,6 +136,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup JUCE and Projucer
+        shell: pwsh
         run: |
           # Clone JUCE if not cached
           if (!(Test-Path "JUCE")) {
@@ -139,19 +145,18 @@ jobs:
             git checkout 7.0.12
             cd ..
           }
-          
+
           # Build Projucer if not cached
           if (!(Test-Path "JUCE/extras/Projucer/Builds/VisualStudio2022/x64/Release/Projucer.exe")) {
             cd JUCE/extras/Projucer/Builds/VisualStudio2022
             msbuild Projucer.sln /p:Configuration=Release /p:Platform=x64
-            cd ../../../..
+            cd ..
+            cd ..
           }
 
-      - name: Build Windows
-        run: |
           # Generate Visual Studio project with Projucer
           ./JUCE/extras/Projucer/Builds/VisualStudio2022/x64/Release/Projucer.exe --resave Pulse24Sync.jucer
-          
+
           # Build the project
           msbuild Builds/VisualStudio2022/Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64
 

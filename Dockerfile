@@ -39,6 +39,13 @@ RUN sed -i 's|path="../../../Downloads/JUCE/modules"|path="JUCE/modules"|g' Puls
 # Debug: Show what the paths look like after sed
 RUN echo "=== PATHS AFTER SED ===" && grep -n "path=" Pulse24Sync.jucer
 
+# Debug: Check if the path actually exists
+RUN echo "=== PATH EXISTS CHECK ===" && \
+    pwd && \
+    ls -la && \
+    echo "JUCE modules exist:" && ls -la JUCE/modules/ && \
+    echo "Testing relative path:" && ls -la JUCE/modules/juce_core/
+
 # Generate project with Projucer
 RUN ./JUCE/extras/Projucer/Builds/LinuxMakefile/build/Projucer --resave Pulse24Sync.jucer
 
