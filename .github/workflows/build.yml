@@ -26,13 +26,10 @@ jobs:
         xcodebuild -project Projucer.xcodeproj -configuration Release
         cd ../../../..
 
-        # Add Projucer to PATH
-        echo "$PWD/JUCE/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS" >> $GITHUB_PATH
-
     - name: Build macOS with Projucer
       run: |
-        # Generate Xcode project
-        Projucer --resave Pulse24Sync.jucer
+        # Generate Xcode project using full path to Projucer
+        ./JUCE/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer --resave Pulse24Sync.jucer
 
         # Build the project
         cd Builds/MacOSX
@@ -67,13 +64,10 @@ jobs:
         msbuild Projucer.sln /p:Configuration=Release /p:Platform=x64
         cd ../../../..
 
-        # Add Projucer to PATH
-        echo "$PWD/JUCE/extras/Projucer/Builds/VisualStudio2022/x64/Release/App/Projucer.exe" >> $GITHUB_PATH
-
     - name: Build Windows with Projucer
       run: |
-        # Generate Visual Studio project
-        Projucer.exe --resave Pulse24Sync.jucer
+        # Generate Visual Studio project using full path to Projucer
+        .\JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\App\Projucer.exe --resave Pulse24Sync.jucer
 
         # Build the project
         cd Builds/VisualStudio2022
