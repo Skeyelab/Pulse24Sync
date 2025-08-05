@@ -72,3 +72,6 @@ Thumbs.db
 
 # Log files
 *.log
+
+# Cursor MCP configuration (may contain secrets)
+.cursor/mcp.json
