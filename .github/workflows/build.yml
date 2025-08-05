@@ -68,7 +68,7 @@ jobs:
 
     - name: Build Windows with Projucer
       run: |
-        # Generate Visual Studio project using full path to Projucer
+        # Generate Visual Studio project using Projucer
         .\JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\App\Projucer.exe --resave Pulse24Sync.jucer
 
         # Build the project
@@ -110,6 +110,10 @@ jobs:
 
     - name: Build Linux with Projucer
       run: |
+        # Create the expected directory structure for JUCE modules
+        mkdir -p ../../../Downloads
+        ln -sf $PWD/JUCE ../../../Downloads/JUCE
+
         # Generate Makefile project using Projucer
         ./JUCE/extras/Projucer/Builds/LinuxMakefile/build/Projucer --resave Pulse24Sync.jucer
 
