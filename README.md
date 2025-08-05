@@ -98,6 +98,55 @@ A VST3 plugin that generates precisely 24 MIDI pulses per quarter note, with rea
 After building, the VST3 plugin will be automatically copied to the appropriate system location:
 
 - **macOS**: `~/Library/Audio/Plug-Ins/VST3/Pulse24Sync.vst3`
+
+## Creating Releases
+
+### Automatic Release Creation
+
+This project includes an automated release system that builds both macOS and Windows versions and creates a GitHub release with all plugin formats.
+
+#### To create a release:
+
+1. **Make sure all changes are committed**:
+   ```bash
+   git add .
+   git commit -m "Your commit message"
+   git push origin main
+   ```
+
+2. **Run the release script**:
+   ```bash
+   ./create-release.sh
+   ```
+
+3. **Follow the prompts** to enter the version number (e.g., `1.0.0`, `1.2.3-beta.1`)
+
+4. **The script will**:
+   - Create a git tag (e.g., `v1.0.0`)
+   - Push the tag to GitHub
+   - Trigger the automated build and release workflow
+
+#### What gets built automatically:
+
+- **macOS**: VST3, Audio Unit (.component), and Standalone (.app)
+- **Windows**: VST3 and Standalone (.exe)
+
+#### Release workflow:
+
+1. GitHub Actions builds both platforms in parallel
+2. All plugin formats are packaged
+3. A GitHub release is created with:
+   - Release notes
+   - Download links for all platforms
+   - Proper versioning and tagging
+
+#### Manual release creation:
+
+If you prefer to create releases manually:
+1. Go to [GitHub Releases](https://github.com/your-repo/releases)
+2. Click "Create a new release"
+3. Set the tag version (e.g., `v1.0.0`)
+4. Upload the built plugin files manually
 - **Windows**: `C:\Program Files\Common Files\VST3\Pulse24Sync.vst3`
 - **Linux**: `~/.vst3/Pulse24Sync.vst3`
 

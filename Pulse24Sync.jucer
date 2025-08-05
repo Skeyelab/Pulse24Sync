@@ -1,7 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="sqUWIl" name="Pulse24Sync" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyName="ericdahl.dev"
+              bundleIdentifier="com.ericdahl.dev.Pulse24Sync" companyWebsite="https://ericdahl.dev"
+              companyEmail="contact@ericdahl.dev" displaySplashScreen="1" reportAppUsage="1"
+              splashScreenColour="Dark" buildVST="0" buildVST3="1" buildAU="1"
+              buildAUv3="0" buildRTAS="0" buildAAX="0" buildStandalone="1"
+              pluginName="Pulse24Sync" pluginDesc="Pulse24Sync Audio Plugin"
+              pluginManufacturer="ericdahl.dev" pluginManufacturerCode="Edah"
+              pluginCode="P24S" pluginChannelConfigs="{1, 1}, {2, 2}" pluginIsSynth="0"
+              pluginWantsMidiIn="0" pluginProducesMidiOut="0" pluginIsMidiEffectPlugin="0"
+              pluginEditorRequiresKeys="0" pluginAUExportPrefix="Pulse24SyncAU"
+              pluginRTASCategory="" aaxIdentifier="com.ericdahl.dev.Pulse24Sync"
+              headerPath="" libraryPath="" customXcodeFlags="" postbuildCommand=""
+              defines="" headerSearchPaths="" librarySearchPaths="" fastMath="0"
+              linkTimeOptimisation="0" stripLocalSymbols="0" pluginFormats="buildVST3,buildAU,buildStandalone"
+              version="1.0.0">
   <MAINGROUP id="FWjK9Z" name="Pulse24Sync">
     <GROUP id="{0DA0E2A3-71C0-CECF-6C80-83E2FD049B35}" name="Source">
       <FILE id="saVNgR" name="PluginProcessor.cpp" compile="1" resource="0"

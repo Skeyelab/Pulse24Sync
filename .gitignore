@@ -75,3 +75,6 @@ Thumbs.db
 
 # Cursor MCP configuration (may contain secrets)
 .cursor/mcp.json
+
+# JUCE Builds directory (generated files)
+Builds/
