@@ -188,9 +188,11 @@ jobs:
         # Create a temporary project file with absolute paths for CI
         cp Pulse24Sync.jucer Pulse24Sync.jucer.backup
         JUCE_PATH=$(pwd)/JUCE/modules
+        # Replace ALL old JUCE module paths (macOS, Windows, and Linux)
+        sed -i "s|path=\"../../../Downloads/JUCE/modules\"|path=\"$JUCE_PATH\"|g" Pulse24Sync.jucer
         sed -i "s|path=\"../JUCE/modules\"|path=\"$JUCE_PATH\"|g" Pulse24Sync.jucer
         echo "Updated JUCE module paths to: $JUCE_PATH"
-
+        
         # Debug: Show what the paths look like now
         echo "=== Checking if sed worked ==="
         grep -n "path=" Pulse24Sync.jucer | grep JUCE
