@@ -14,23 +14,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup JUCE
+    - name: Build macOS with CMake
       run: |
-        git clone https://github.com/juce-framework/JUCE.git
-        cd JUCE
-        git checkout 6.1.6
-
-    - name: Build macOS
-      run: |
-        cd ..
-        xcodebuild -project Builds/MacOSX/Pulse24Sync.xcodeproj -configuration Release
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make -j$(sysctl -n hw.ncpu)
 
     - name: Upload macOS build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: macos-builds
         path: |
-          Builds/MacOSX/build/Release/
+          build/Pulse24Sync_artefacts/Release/
           /Users/runner/Library/Audio/Plug-Ins/Components/Pulse24Sync.component
           /Users/runner/Library/Audio/Plug-Ins/VST3/Pulse24Sync.vst3
         retention-days: 7
@@ -42,24 +38,42 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup JUCE
+    - name: Build Windows with CMake
       run: |
-        git clone https://github.com/juce-framework/JUCE.git
-        cd JUCE
-        git checkout 6.1.6
-
-    - name: Build Windows VST3
-      run: |
-        cd ..
-        msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=true /m
-
-    - name: Build Windows Standalone
-      run: |
-        msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=true /m /t:Pulse24Sync_StandalonePlugin
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        cmake --build . --config Release --parallel
 
     - name: Upload Windows build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: windows-builds
-        path: Builds/VisualStudio2022/build/Release/
+        path: build/Pulse24Sync_artefacts/Release/
+        retention-days: 7
+
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libasound2-dev libjack-jackd2-dev
+
+    - name: Build Linux with CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make -j$(nproc)
+
+    - name: Upload Linux build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-builds
+        path: build/Pulse24Sync_artefacts/Release/
         retention-days: 7
