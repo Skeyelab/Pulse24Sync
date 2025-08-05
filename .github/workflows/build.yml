@@ -15,17 +15,33 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Cache JUCE
+      uses: actions/cache@v4
+      with:
+        path: |
+          JUCE
+          ~/Library/Caches/com.juce.Projucer
+        key: ${{ runner.os }}-juce-${{ hashFiles('**/Pulse24Sync.jucer') }}
+        restore-keys: |
+          ${{ runner.os }}-juce-
+
     - name: Setup JUCE and Projucer
       run: |
-        # Download JUCE
-        git clone https://github.com/juce-framework/JUCE.git
-        cd JUCE
-        git checkout 7.0.12
+        # Download JUCE if not cached
+        if [ ! -d "JUCE" ]; then
+          git clone https://github.com/juce-framework/JUCE.git
+          cd JUCE
+          git checkout 7.0.12
+          cd ..
+        fi
 
-        # Build Projucer
-        cd extras/Projucer/Builds/MacOSX
-        xcodebuild -project Projucer.xcodeproj -configuration Release
-        cd ../../../..
+        # Build Projucer if not already built
+        if [ ! -f "JUCE/extras/Projucer/Builds/MacOSX/build/Release/Projucer.app/Contents/MacOS/Projucer" ]; then
+          cd JUCE
+          cd extras/Projucer/Builds/MacOSX
+          xcodebuild -project Projucer.xcodeproj -configuration Release
+          cd ../../..
+        fi
 
     - name: Build macOS with Projucer
       run: |
@@ -54,17 +70,33 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Cache JUCE
+      uses: actions/cache@v4
+      with:
+        path: |
+          JUCE
+          ${{ env.LOCALAPPDATA }}\JUCE
+        key: ${{ runner.os }}-juce-${{ hashFiles('**/Pulse24Sync.jucer') }}
+        restore-keys: |
+          ${{ runner.os }}-juce-
+
     - name: Setup JUCE and Projucer
       run: |
-        # Download JUCE
-        git clone https://github.com/juce-framework/JUCE.git
-        cd JUCE
-        git checkout 7.0.12
+        # Download JUCE if not cached
+        if (!(Test-Path "JUCE")) {
+          git clone https://github.com/juce-framework/JUCE.git
+          cd JUCE
+          git checkout 7.0.12
+          cd ..
+        }
 
-        # Build Projucer
-        cd extras/Projucer/Builds/VisualStudio2022
-        msbuild Projucer.sln /p:Configuration=Release /p:Platform=x64
-        cd ../../../..
+        # Build Projucer if not already built
+        if (!(Test-Path "JUCE\extras\Projucer\Builds\VisualStudio2022\x64\Release\App\Projucer.exe")) {
+          cd JUCE
+          cd extras\Projucer\Builds\VisualStudio2022
+          msbuild Projucer.sln /p:Configuration=Release /p:Platform=x64
+          cd ..\..\..
+        }
 
     - name: Build Windows with Projucer
       run: |
@@ -90,6 +122,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Cache JUCE and dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          JUCE
+          ~/.cache/juce
+          /usr/local/lib
+          /usr/local/include
+        key: ${{ runner.os }}-juce-deps-${{ hashFiles('**/Pulse24Sync.jucer') }}
+        restore-keys: |
+          ${{ runner.os }}-juce-deps-
+
     - name: Install dependencies
       run: |
         sudo apt-get update
@@ -99,14 +143,21 @@ jobs:
 
     - name: Setup JUCE and Projucer
       run: |
-        # Download JUCE
-        git clone https://github.com/juce-framework/JUCE.git
-        cd JUCE
-        git checkout 7.0.12
+        # Download JUCE if not cached
+        if [ ! -d "JUCE" ]; then
+          git clone https://github.com/juce-framework/JUCE.git
+          cd JUCE
+          git checkout 7.0.12
+          cd ..
+        fi
 
-        # Build Projucer
-        cd extras/Projucer/Builds/LinuxMakefile
-        make -j$(nproc)
+        # Build Projucer if not already built
+        if [ ! -f "JUCE/extras/Projucer/Builds/LinuxMakefile/build/Projucer" ]; then
+          cd JUCE
+          cd extras/Projucer/Builds/LinuxMakefile
+          make -j$(nproc)
+          cd ../../..
+        fi
 
     - name: Build Linux with Projucer
       run: |
