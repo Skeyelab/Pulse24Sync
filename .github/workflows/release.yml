@@ -31,8 +31,9 @@ jobs:
           path: |
             ~/Library/Caches/JUCE
             /Applications/JUCE 2/modules
-            c:\JUCE\modules
-            $env:LOCALAPPDATA\JUCE
+            Builds\VisualStudio2022\build
+            $env:LOCALAPPDATA\Microsoft\VisualStudio\*\MSBuild\Current\Bin\Roslyn
+            $env:TEMP\juce-cache
           key: ${{ runner.os }}-juce-modules-${{ hashFiles('Pulse24Sync.jucer') }}
           restore-keys: |
             ${{ runner.os }}-juce-modules-
@@ -43,8 +44,9 @@ jobs:
           path: |
             ~/Library/Developer/Xcode/DerivedData
             Builds/MacOSX/build
-            Builds\VisualStudio2022\build
-            $env:LOCALAPPDATA\Microsoft\VisualStudio\*\MSBuild\Current\Bin\Roslyn
+            Builds\VisualStudio2022\x64\Release
+            Builds\VisualStudio2022\Release
+            $env:TEMP\vs-cache
           key: ${{ runner.os }}-build-cache-${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}
           restore-keys: |
             ${{ runner.os }}-build-cache-
