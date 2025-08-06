@@ -20,59 +20,63 @@ A VST3 plugin that generates precisely 24 MIDI pulses per quarter note, with rea
 
 ## Build Requirements
 
+- **CMake** 3.15 or higher
+- **C++17** compatible compiler
 - **JUCE Framework** (will be downloaded automatically)
-- **Projucer** (for project generation)
-- **Platform-specific build tools**:
-  - **macOS**: Xcode with command line tools
-  - **Windows**: Visual Studio 2022 with C++ workload
-  - **Linux**: GCC/Clang, Make, and audio development libraries
 
 ## Building the Plugin
 
 ### macOS
 
-1. **Clone the repository**:
+1. **Clone the repository and navigate to it**:
    ```bash
-   git clone https://github.com/Skeyelab/Pulse24Sync.git
-   cd Pulse24Sync
+   cd /Users/edahl/Documents/GitHub/Pulse24Sync
    ```
 
-2. **Build the plugin**:
+2. **Create a build directory**:
    ```bash
-   ./build_macos.sh
+   mkdir build
+   cd build
    ```
 
-3. **Install the plugin**:
+3. **Configure with CMake**:
    ```bash
-   # Copy from the dist folder to your plugin directory
-   cp -R dist/Pulse24Sync.vst3 ~/Library/Audio/Plug-Ins/VST3/
-   cp -R dist/Pulse24Sync.component ~/Library/Audio/Plug-Ins/Components/
+   cmake ..
+   ```
+
+4. **Build the plugin**:
+   ```bash
+   make -j$(nproc)
    ```
 
 ### Windows
 
-1. **Clone the repository**:
+1. **Open Command Prompt or PowerShell**:
    ```cmd
-   git clone https://github.com/Skeyelab/Pulse24Sync.git
-   cd Pulse24Sync
+   cd C:\path\to\Pulse24Sync
    ```
 
-2. **Build the plugin**:
+2. **Create build directory**:
    ```cmd
-   build_windows.bat
+   mkdir build
+   cd build
    ```
 
-3. **Install the plugin**:
+3. **Configure with CMake**:
    ```cmd
-   # Copy from the dist folder to your plugin directory
-   xcopy "dist\Pulse24Sync.vst3" "C:\Program Files\Common Files\VST3\" /E /I /Y
+   cmake .. -G "Visual Studio 16 2019" -A x64
+   ```
+
+4. **Build the plugin**:
+   ```cmd
+   cmake --build . --config Release
    ```
 
 ### Linux
 
 1. **Install dependencies** (Ubuntu/Debian):
    ```bash
-   sudo apt-get install build-essential cmake git libasound2-dev libjack-jackd2-dev libfreetype6-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libxrender-dev libxfixes-dev libxss-dev libgl1-mesa-dev libglu1-mesa-dev libwebkit2gtk-4.0-dev
+   ./install-linux-deps.sh
    ```
 
 2. **Build the plugin**:
@@ -80,41 +84,15 @@ A VST3 plugin that generates precisely 24 MIDI pulses per quarter note, with rea
    ./build.sh
    ```
 
-3. **Install the plugin**:
-   ```bash
-   # Copy from the dist folder to your plugin directory
-   cp -R dist/Pulse24Sync.vst3 ~/.vst3/
-   ```
-
-For detailed Linux build instructions, see [LINUX_BUILD_GUIDE.md](LINUX_BUILD_GUIDE.md).
-
-## Distribution Scripts
-
-If you have existing build artifacts and want to create a clean distribution:
-
-### Windows
-```cmd
-create-windows-distribution.bat
-```
-
-### macOS
-```bash
-./create-macos-distribution.sh
-```
-
-These scripts extract only the final plugin files (excluding development artifacts) into a `dist/` folder.
+For detailed Linux build instructions and other distributions, see [LINUX_BUILD_GUIDE.md](LINUX_BUILD_GUIDE.md).
 
 ## Installation
 
-After building, manually copy the plugin files from the `dist/` folder to the appropriate system location:
+After building, the VST3 plugin will be automatically copied to the appropriate system location:
 
-- **macOS**:
-  - VST3: `~/Library/Audio/Plug-Ins/VST3/`
-  - AU: `~/Library/Audio/Plug-Ins/Components/`
-- **Windows**: `C:\Program Files\Common Files\VST3\`
-- **Linux**: `~/.vst3/`
-
-Then restart your DAW and scan for new plugins.
+- **macOS**: `~/Library/Audio/Plug-Ins/VST3/Pulse24Sync.vst3`
+- **Windows**: `C:\Program Files\Common Files\VST3\Pulse24Sync.vst3`
+- **Linux**: `~/.vst3/Pulse24Sync.vst3`
 
 ## Creating Releases
 
@@ -157,6 +135,14 @@ This project includes an automated release system that builds both macOS and Win
    - Download links for all platforms
    - Proper versioning and tagging
 
+#### Manual release creation:
+
+If you prefer to create releases manually:
+1. Go to [GitHub Releases](https://github.com/your-repo/releases)
+2. Click "Create a new release"
+3. Set the tag version (e.g., `v1.0.0`)
+4. Upload the built plugin files manually
+
 ## Usage
 
 1. **Load the plugin** in your DAW as a VST3 effect
@@ -181,7 +167,7 @@ This project includes an automated release system that builds both macOS and Win
 
 ### Plugin not appearing in DAW
 - Ensure the plugin was built successfully
-- Check that the plugin files were copied to the correct location
+- Check that the VST3 file was copied to the correct location
 - Restart your DAW after installation
 
 ### Tempo sync issues
@@ -190,8 +176,8 @@ This project includes an automated release system that builds both macOS and Win
 - Check that the DAW is playing (plugin only generates pulses during playback)
 
 ### Build errors
-- Ensure you have the required build tools installed
-- Check that Projucer is available at the expected location
+- Ensure you have CMake 3.15+ installed
+- Check that your compiler supports C++17
 - Verify internet connection (JUCE will be downloaded automatically)
 
 ## License
