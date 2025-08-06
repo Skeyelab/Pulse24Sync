@@ -14,12 +14,15 @@ jobs:
         include:
           - os: macOS
             artifact-name: macos-builds
-            build-path: Builds/MacOSX/build/Release/
+            build-path: |
+              Builds/MacOSX/build/Release/Pulse24Sync.vst3
+              Builds/MacOSX/build/Release/Pulse24Sync.component
+              Builds/MacOSX/build/Release/Pulse24Sync.app
           - os: Windows
             artifact-name: windows-builds
             build-path: |
-              Builds/VisualStudio2022/x64/Release/
-              Builds/VisualStudio2022/build/Release/
+              Builds/VisualStudio2022/x64/Release/Pulse24Sync.vst3
+              Builds/VisualStudio2022/x64/Release/Pulse24Sync.exe
 
     steps:
       - name: Checkout code
@@ -177,6 +180,15 @@ jobs:
 
           echo "Build completed successfully"
 
+      - name: Cleanup macOS build artifacts
+        if: matrix.os == 'macOS' && always()
+        run: |
+          # Clean up temporary files
+          find . -name "*.tmp" -o -name "*.temp" -o -name "*~" -type f -delete 2>/dev/null || true
+          find . -name ".DS_Store" -type f -delete 2>/dev/null || true
+          find . -name "*.build" -type d -exec rm -rf {} + 2>/dev/null || true
+          find . -name "DerivedData" -type d -exec rm -rf {} + 2>/dev/null || true
+
       - name: Build Windows Plugin
         if: matrix.os == 'Windows'
         shell: cmd
@@ -195,6 +207,111 @@ jobs:
           )
 
           echo Build completed successfully
+
+      - name: Cleanup Windows build artifacts
+        if: matrix.os == 'Windows' && always()
+        shell: powershell
+        run: |
+          # Clean up temporary files
+          Get-ChildItem -Path . -Recurse -Include @("*.tmp", "*.temp", "*~", "Thumbs.db", "ehthumbs.db") -Force | Remove-Item -Force -ErrorAction SilentlyContinue
+
+          # Clean up Visual Studio temporary files
+          Get-ChildItem -Path . -Recurse -Name "*.build" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
+          Get-ChildItem -Path . -Recurse -Name ".vs" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
+
+      - name: Show build status (macOS)
+        if: matrix.os == 'macOS'
+        run: |
+          echo "🔨 Built from source using pre-installed build tools"
+          echo "📦 macOS artifacts:"
+          find Builds/MacOSX/build/Release/ -name "*.vst3" -o -name "*.component" -o -name "*.app" 2>/dev/null || echo "  (checking built artifacts...)"
+
+      - name: Show build status (Windows)
+        if: matrix.os == 'Windows'
+        shell: powershell
+        run: |
+          Write-Host "🔨 Built from source using pre-installed build tools"
+          Write-Host "📦 Windows artifacts:"
+
+          $artifacts = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\" -Recurse -Include "*.vst3", "*.exe" -ErrorAction SilentlyContinue
+          if ($artifacts) {
+            $artifacts | ForEach-Object { Write-Host "  $($_.Name)" }
+          } else {
+            Write-Host "  (checking built artifacts...)"
+          }
+
+      # Verify that we have valid build artifacts
+      - name: Validate build artifacts (macOS)
+        if: matrix.os == 'macOS'
+        run: |
+          echo "🔍 Validating build artifacts..."
+          artifacts_found=false
+
+          # Check for macOS artifacts
+          if [ -d "Builds/MacOSX/build/Release" ]; then
+            echo "✅ macOS build directory exists"
+
+            # Look for expected plugin formats
+            if find Builds/MacOSX/build/Release -name "*.vst3" | grep -q .; then
+              echo "✅ VST3 plugin found"
+              artifacts_found=true
+            fi
+            if find Builds/MacOSX/build/Release -name "*.component" | grep -q .; then
+              echo "✅ Audio Unit plugin found"
+              artifacts_found=true
+            fi
+            if find Builds/MacOSX/build/Release -name "*.app" | grep -q .; then
+              echo "✅ Standalone app found"
+              artifacts_found=true
+            fi
+          fi
+
+          if [ "$artifacts_found" = "false" ]; then
+            echo "❌ No valid build artifacts found!"
+            echo "Build directory contents:"
+            ls -la Builds/MacOSX/build/Release/ 2>/dev/null || echo "Directory not found"
+            exit 1
+          else
+            echo "✅ Build artifacts validation passed"
+          fi
+
+      - name: Validate build artifacts (Windows)
+        if: matrix.os == 'Windows'
+        shell: powershell
+        run: |
+          Write-Host "🔍 Validating build artifacts..."
+          $artifactsFound = $false
+
+          # Check for Windows artifacts
+          if (Test-Path "Builds\VisualStudio2022\x64\Release") {
+            Write-Host "✅ Windows build directory exists"
+
+            # Look for expected plugin formats
+            $vst3Files = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release" -Recurse -Include "*.vst3" -ErrorAction SilentlyContinue
+            if ($vst3Files) {
+              Write-Host "✅ VST3 plugin found"
+              $artifactsFound = $true
+            }
+
+            $exeFiles = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release" -Recurse -Include "*.exe" -ErrorAction SilentlyContinue
+            if ($exeFiles) {
+              Write-Host "✅ Standalone executable found"
+              $artifactsFound = $true
+            }
+          }
+
+          if (-not $artifactsFound) {
+            Write-Host "❌ No valid build artifacts found!"
+            Write-Host "Build directory contents:"
+            if (Test-Path "Builds\VisualStudio2022\x64\Release") {
+              Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release" -Recurse -File | Select-Object -First 10 | ForEach-Object { Write-Host "  $($_.Name)" }
+            } else {
+              Write-Host "Directory not found"
+            }
+            exit 1
+          } else {
+            Write-Host "✅ Build artifacts validation passed"
+          }
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -252,29 +369,32 @@ jobs:
           ls -la ./artifacts/
           ls -la ./artifacts/macos-builds/ || echo "macos-builds not found"
           ls -la ./artifacts/windows-builds/ || echo "windows-builds not found"
+          echo "=== File Sizes ==="
+          du -sh ./artifacts/macos-builds/ || echo "macos-builds not found"
+          du -sh ./artifacts/windows-builds/ || echo "windows-builds not found"
 
       - name: Create release packages
         run: |
           mkdir -p release-packages
-
+          
           # macOS packages
           if [ -d "./artifacts/macos-builds" ]; then
             echo "Creating macOS packages..."
-
+            
             # VST3
             if [ -d "./artifacts/macos-builds/Pulse24Sync.vst3" ]; then
               cd ./artifacts/macos-builds
               zip -r ../../release-packages/Pulse24Sync-macOS-vst3.zip Pulse24Sync.vst3
               cd ../..
             fi
-
+            
             # Audio Unit
             if [ -d "./artifacts/macos-builds/Pulse24Sync.component" ]; then
               cd ./artifacts/macos-builds
               zip -r ../../release-packages/Pulse24Sync-macOS-au.zip Pulse24Sync.component
               cd ../..
             fi
-
+            
             # Standalone
             if [ -d "./artifacts/macos-builds/Pulse24Sync.app" ]; then
               cd ./artifacts/macos-builds
@@ -282,18 +402,18 @@ jobs:
               cd ../..
             fi
           fi
-
+          
           # Windows packages
           if [ -d "./artifacts/windows-builds" ]; then
             echo "Creating Windows packages..."
-
+            
             # VST3
             if [ -d "./artifacts/windows-builds/Pulse24Sync.vst3" ]; then
               cd ./artifacts/windows-builds
               zip -r ../../release-packages/Pulse24Sync-Windows-vst3.zip Pulse24Sync.vst3
               cd ../..
             fi
-
+            
             # Standalone
             if [ -f "./artifacts/windows-builds/Pulse24Sync.exe" ]; then
               cd ./artifacts/windows-builds
@@ -301,7 +421,7 @@ jobs:
               cd ../..
             fi
           fi
-
+          
           echo "Created packages:"
           ls -la release-packages/
 

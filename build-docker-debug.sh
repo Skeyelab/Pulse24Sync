@@ -9,6 +9,43 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
+# Cleanup function to ensure resources are cleaned up on exit
+cleanup() {
+    local exit_code=$?
+    echo "🧹 Performing cleanup..."
+    
+    # Stop and remove container if it exists
+    if docker ps -a --format '{{.Names}}' | grep -q "^build-container-debug$"; then
+        echo "  - Stopping and removing debug build container..."
+        docker stop build-container-debug >/dev/null 2>&1 || true
+        docker rm build-container-debug >/dev/null 2>&1 || true
+    fi
+    
+    # Remove Docker image to prevent accumulation
+    if docker images --format '{{.Repository}}:{{.Tag}}' | grep -q "^pulse24sync-build-debug:latest$"; then
+        echo "  - Removing debug Docker image..."
+        docker rmi pulse24sync-build-debug:latest >/dev/null 2>&1 || true
+    fi
+    
+    # Clean up the temporary Dockerfile.debug
+    if [ -f "Dockerfile.debug" ]; then
+        echo "  - Removing temporary Dockerfile.debug..."
+        rm -f Dockerfile.debug
+    fi
+    
+    # Clean up any dangling images
+    if [ "$(docker images -f "dangling=true" -q)" ]; then
+        echo "  - Cleaning up dangling Docker images..."
+        docker image prune -f >/dev/null 2>&1 || true
+    fi
+    
+    echo "🧹 Cleanup completed"
+    exit $exit_code
+}
+
+# Set trap to ensure cleanup runs on script exit (success, failure, or interruption)
+trap cleanup EXIT INT TERM
+
 # Create a Dockerfile for the build environment
 cat > Dockerfile.debug << 'EOF'
 FROM ubuntu:24.04
@@ -93,9 +130,7 @@ echo "📋 Copying build artifacts..."
 mkdir -p linux-builds-debug
 docker cp build-container-debug:/workspace/Builds/LinuxMakefile/build ./linux-builds-debug
 
-echo "🧹 Cleaning up..."
-docker stop build-container-debug
-docker rm build-container-debug
-
 echo "✅ Debug build completed! Check the 'linux-builds-debug' directory for artifacts."
 ls -la linux-builds-debug/
+
+# Note: cleanup() will be called automatically due to the trap
