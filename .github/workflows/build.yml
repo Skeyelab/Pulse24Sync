@@ -175,8 +175,8 @@ jobs:
         run: |
           echo "Creating clean distribution for macOS..."
           cd Builds/MacOSX/build/Release
-          chmod +x ../../../create-macos-distribution.sh
-          ../../../create-macos-distribution.sh
+          chmod +x $GITHUB_WORKSPACE/create-macos-distribution.sh
+          $GITHUB_WORKSPACE/create-macos-distribution.sh
 
       - name: Verify distribution
         run: |
