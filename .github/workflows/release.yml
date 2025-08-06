@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS, Windows]
+        os: [macOS, Windows, ubuntu-24.04]
         include:
           - os: macOS
             artifact-name: macos-builds
@@ -23,6 +23,11 @@ jobs:
             build-path: |
               Builds/VisualStudio2022/x64/Release/Pulse24Sync.vst3
               Builds/VisualStudio2022/x64/Release/Pulse24Sync.exe
+          - os: ubuntu-24.04
+            artifact-name: linux-builds
+            build-path: |
+              build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3
+              build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync
 
     steps:
       - name: Checkout code
@@ -155,6 +160,28 @@ jobs:
 
           Write-Host "Project files generated successfully"
 
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            git \
+            pkg-config \
+            libasound2-dev \
+            libjack-jackd2-dev \
+            libfreetype6-dev \
+            libgl1-mesa-dev \
+            libcurl4-openssl-dev \
+            libx11-dev \
+            libxinerama-dev \
+            libxext-dev \
+            libxrandr-dev \
+            libxcursor-dev \
+            libxcomposite-dev \
+            libgtk-3-dev
+
       - name: Build macOS Plugin
         if: matrix.os == 'macOS'
         run: |
@@ -209,6 +236,13 @@ jobs:
           Get-ChildItem -Path . -Recurse -Name "*.build" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
           Get-ChildItem -Path . -Recurse -Name ".vs" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
 
+      - name: Build Linux Plugin
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          echo "Building Pulse24Sync VST Plugin for Linux..."
+          chmod +x build.sh
+          ./build.sh
+
       - name: Show build status (macOS)
         if: matrix.os == 'macOS'
         run: |
@@ -229,6 +263,13 @@ jobs:
           } else {
             Write-Host "  (checking built artifacts...)"
           }
+
+      - name: Show build status (Linux)
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          echo "🔨 Built from source using pre-installed build tools"
+          echo "📦 Linux artifacts:"
+          find build/Pulse24Sync_artefacts/Release/ -name "*.vst3" -o -name "Pulse24Sync" 2>/dev/null || echo "  (checking built artifacts...)"
 
       # Verify that we have valid build artifacts
       - name: Validate build artifacts (macOS)
@@ -302,6 +343,41 @@ jobs:
           } else {
             Write-Host "✅ Build artifacts validation passed"
           }
+
+      - name: Validate build artifacts (Linux)
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          echo "🔍 Validating build artifacts..."
+          artifacts_found=false
+
+          # Check for Linux artifacts
+          if [ -d "build/Pulse24Sync_artefacts/Release" ]; then
+            echo "✅ Linux build directory exists"
+
+            # Look for expected plugin formats
+            if find build/Pulse24Sync_artefacts/Release -name "*.vst3" | grep -q .; then
+              echo "✅ VST3 plugin found"
+              artifacts_found=true
+            fi
+
+            if [ -f "build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync" ]; then
+              echo "✅ Standalone executable found"
+              artifacts_found=true
+            fi
+          fi
+
+          if [ "$artifacts_found" = false ]; then
+            echo "❌ No valid build artifacts found!"
+            echo "Build directory contents:"
+            if [ -d "build/Pulse24Sync_artefacts/Release" ]; then
+              find build/Pulse24Sync_artefacts/Release -type f | head -10
+            else
+              echo "Directory not found"
+            fi
+            exit 1
+          else
+            echo "✅ Build artifacts validation passed"
+          fi
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
