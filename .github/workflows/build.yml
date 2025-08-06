@@ -174,16 +174,17 @@ jobs:
       - name: Create clean distribution
         run: |
           echo "Creating clean distribution for macOS..."
-          chmod +x create-macos-distribution.sh
-          ./create-macos-distribution.sh
+          cd Builds/MacOSX/build/Release
+          chmod +x ../../../create-macos-distribution.sh
+          ../../../create-macos-distribution.sh
 
       - name: Verify distribution
         run: |
           echo "Checking distribution artifacts:"
-          ls -la dist/
+          ls -la Builds/MacOSX/build/Release/dist/
           echo ""
           echo "Distribution size:"
-          du -sh dist/*
+          du -sh Builds/MacOSX/build/Release/dist/*
 
       - name: Cleanup macOS build artifacts
         if: always()
@@ -198,7 +199,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-builds
-          path: dist/
+          path: Builds/MacOSX/build/Release/dist/
 
   build-windows:
     runs-on: Windows
