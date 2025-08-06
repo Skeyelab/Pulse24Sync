@@ -9,88 +9,67 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-24.04
-    if: false  # Disabled - set to true to enable
+    if: true  # Enabled for Linux builds
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Linux with Docker and CMake
+      - name: Install Linux dependencies
         run: |
-          # Create a Dockerfile for the build environment
-          cat > Dockerfile << 'EOF'
-          FROM ubuntu:24.04
-
-          # Install dependencies
-          RUN apt-get update && apt-get install -y \
+          sudo apt-get update
+          sudo apt-get install -y \
             build-essential \
             cmake \
             git \
+            pkg-config \
             libasound2-dev \
             libjack-jackd2-dev \
             libfreetype6-dev \
+            libgl1-mesa-dev \
             libcurl4-openssl-dev \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
             libx11-dev \
-            libxrandr-dev \
             libxinerama-dev \
+            libxext-dev \
+            libxrandr-dev \
             libxcursor-dev \
-            libxi-dev \
-            pkg-config \
-            && rm -rf /var/lib/apt/lists/*
+            libxcomposite-dev \
+            libgtk-3-dev
 
-          # Set working directory
-          WORKDIR /workspace
-
-          # Copy project files
-          COPY . .
-
-          # Clone JUCE
-          RUN git clone https://github.com/juce-framework/JUCE.git && \
-              cd JUCE && \
-              git checkout 7.0.12
-
-          # Create build directory and build with CMake
-          RUN mkdir -p build && \
-              cd build && \
-              cmake .. -DCMAKE_BUILD_TYPE=Release \
-                -DJUCE_BUILD_EXTRAS=OFF \
-                -DJUCE_BUILD_EXAMPLES=OFF \
-                -DJUCE_ENABLE_MODULE_SOURCE_GROUPS=ON && \
-              make -j$(nproc)
-
-          # Keep container running to copy artifacts
-          CMD ["tail", "-f", "/dev/null"]
-          EOF
-
-          # Build and run the Docker container
-          docker build -t pulse24sync-build .
-          docker run -d --name build-container pulse24sync-build tail -f /dev/null
-
-          # Copy build artifacts from container
-          docker cp build-container:/workspace/build ./linux-builds
-
-      - name: Cleanup Docker resources
-        if: always()
+      - name: Verify dependencies
         run: |
-          # Stop and remove container
-          docker stop build-container || true
-          docker rm build-container || true
-          
-          # Remove Docker image
-          docker rmi pulse24sync-build || true
-          
-          # Clean up dangling images and containers
-          docker system prune -f || true
-          
-          # Remove temporary Dockerfile
-          rm -f Dockerfile
+          echo "Verifying required packages are available:"
+          pkg-config --exists alsa && echo "✓ ALSA" || echo "✗ ALSA"
+          pkg-config --exists jack && echo "✓ JACK" || echo "✗ JACK"
+          pkg-config --exists freetype2 && echo "✓ FreeType2" || echo "✗ FreeType2"
+          pkg-config --exists gl && echo "✓ OpenGL" || echo "✗ OpenGL"
+          pkg-config --exists libcurl && echo "✓ cURL" || echo "✗ cURL"
+          cmake --version
+          gcc --version
+
+      - name: Build Linux Plugin
+        run: |
+          echo "Building Pulse24Sync VST Plugin for Linux..."
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Verify build outputs
+        run: |
+          echo "Checking build artifacts:"
+          ls -la build/Pulse24Sync_artefacts/Release/
+          echo ""
+          echo "VST3 Plugin:"
+          ls -la build/Pulse24Sync_artefacts/Release/VST3/
+          echo ""
+          echo "Standalone Application:"
+          ls -la build/Pulse24Sync_artefacts/Release/Standalone/
 
       - name: Upload Linux build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-builds
-          path: linux-builds/
+          path: |
+            build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3/
+            build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync
 
   build-macos:
     runs-on: macOS
