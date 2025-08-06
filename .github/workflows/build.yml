@@ -307,16 +307,17 @@ jobs:
         shell: cmd
         run: |
           echo Creating clean distribution for Windows...
-          create-windows-distribution.bat
+          cd Builds\VisualStudio2022\x64\Release
+          ..\..\..\create-windows-distribution.bat
 
       - name: Verify distribution
         shell: cmd
         run: |
           echo Checking distribution artifacts:
-          dir dist
+          dir Builds\VisualStudio2022\x64\Release\dist
           echo.
           echo Distribution size:
-          dir dist /s
+          dir Builds\VisualStudio2022\x64\Release\dist /s
 
       - name: Cleanup Windows build artifacts
         if: always()
@@ -333,4 +334,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-builds
-          path: dist/
+          path: Builds/VisualStudio2022/x64/Release/dist/
