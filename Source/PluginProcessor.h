@@ -42,5 +42,9 @@ public:
     PulseGenerator pulseGenerator;
 
 private:
+    // Helper methods
+    void updatePulseGeneratorParameters();
+    int getPPQNValueFromIndex(int index);
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Pulse24SyncAudioProcessor)
 };

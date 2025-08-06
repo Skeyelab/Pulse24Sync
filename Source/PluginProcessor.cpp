@@ -7,11 +7,23 @@ Pulse24SyncAudioProcessor::Pulse24SyncAudioProcessor()
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
     parameters(*this, nullptr, juce::Identifier("Pulse24Sync"),
         {
+            // Basic parameters
             std::make_unique<juce::AudioParameterBool>("enabled", "Enabled", true),
             std::make_unique<juce::AudioParameterFloat>("pulseVelocity", "Pulse Velocity", 0.0f, 127.0f, 100.0f),
             std::make_unique<juce::AudioParameterInt>("pulseChannel", "Pulse Channel", 1, 16, 1),
             std::make_unique<juce::AudioParameterBool>("syncToHost", "Sync to Host", true),
-            std::make_unique<juce::AudioParameterFloat>("manualBPM", "Manual BPM", 60.0f, 200.0f, 120.0f)
+            std::make_unique<juce::AudioParameterFloat>("manualBPM", "Manual BPM", 60.0f, 200.0f, 120.0f),
+            
+            // Enhanced sync parameters
+            std::make_unique<juce::AudioParameterChoice>("ppqnResolution", "PPQN Resolution", 
+                juce::StringArray{"24 PPQN", "48 PPQN", "96 PPQN", "192 PPQN", "480 PPQN"}, 0),
+            std::make_unique<juce::AudioParameterInt>("mmcDeviceID", "MMC Device ID", 0, 127, 127),
+            std::make_unique<juce::AudioParameterBool>("mmcEnabled", "MMC Enabled", false),
+            std::make_unique<juce::AudioParameterBool>("sendClockWhenStopped", "Send Clock When Stopped", false),
+            std::make_unique<juce::AudioParameterBool>("sendMMCCommands", "Send MMC Commands", false),
+            std::make_unique<juce::AudioParameterBool>("sendSPP", "Send Song Position Pointer", false),
+            std::make_unique<juce::AudioParameterBool>("useMidiClock", "Use MIDI Clock", true),
+            std::make_unique<juce::AudioParameterBool>("useNotePulses", "Use Note Pulses", false)
         })
 {
 }
@@ -79,11 +91,7 @@ void Pulse24SyncAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     pulseGenerator.prepare(sampleRate);
 
     // Set initial parameters
-    pulseGenerator.setEnabled(*parameters.getRawParameterValue("enabled"));
-    pulseGenerator.setPulseVelocity(*parameters.getRawParameterValue("pulseVelocity"));
-    pulseGenerator.setPulseChannel(static_cast<int>(*parameters.getRawParameterValue("pulseChannel")));
-    pulseGenerator.setSyncToHost(*parameters.getRawParameterValue("syncToHost"));
-    pulseGenerator.setManualBPM(*parameters.getRawParameterValue("manualBPM"));
+    updatePulseGeneratorParameters();
 }
 
 void Pulse24SyncAudioProcessor::releaseResources()
@@ -108,11 +116,7 @@ void Pulse24SyncAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
         buffer.clear(i, 0, buffer.getNumSamples());
 
     // Update pulse generator parameters
-    pulseGenerator.setEnabled(*parameters.getRawParameterValue("enabled"));
-    pulseGenerator.setPulseVelocity(*parameters.getRawParameterValue("pulseVelocity"));
-    pulseGenerator.setPulseChannel(static_cast<int>(*parameters.getRawParameterValue("pulseChannel")));
-    pulseGenerator.setSyncToHost(*parameters.getRawParameterValue("syncToHost"));
-    pulseGenerator.setManualBPM(*parameters.getRawParameterValue("manualBPM"));
+    updatePulseGeneratorParameters();
 
     // Get host tempo information
     juce::AudioPlayHead* playHead = getPlayHead();
@@ -124,11 +128,46 @@ void Pulse24SyncAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
             pulseGenerator.setHostTempo(posInfo->getBpm().orFallback(120.0));
             pulseGenerator.setHostIsPlaying(posInfo->getIsPlaying());
             pulseGenerator.setHostPosition(posInfo->getTimeInSeconds().orFallback(0.0));
+            pulseGenerator.setHostPPQPosition(posInfo->getPpqPosition().orFallback(0.0));
         }
     }
 
     // Process pulses and generate MIDI
     pulseGenerator.process(buffer.getNumSamples(), getSampleRate(), midiMessages);
+}
+
+void Pulse24SyncAudioProcessor::updatePulseGeneratorParameters()
+{
+    // Basic parameters
+    pulseGenerator.setEnabled(*parameters.getRawParameterValue("enabled"));
+    pulseGenerator.setPulseVelocity(*parameters.getRawParameterValue("pulseVelocity"));
+    pulseGenerator.setPulseChannel(static_cast<int>(*parameters.getRawParameterValue("pulseChannel")));
+    pulseGenerator.setSyncToHost(*parameters.getRawParameterValue("syncToHost"));
+    pulseGenerator.setManualBPM(*parameters.getRawParameterValue("manualBPM"));
+
+    // Enhanced sync parameters
+    int ppqnIndex = static_cast<int>(*parameters.getRawParameterValue("ppqnResolution"));
+    PPQNResolution resolution = static_cast<PPQNResolution>(getPPQNValueFromIndex(ppqnIndex));
+    pulseGenerator.setPPQNResolution(resolution);
+    
+    pulseGenerator.setMMCDeviceID(static_cast<int>(*parameters.getRawParameterValue("mmcDeviceID")));
+    pulseGenerator.setMMCEnabled(*parameters.getRawParameterValue("mmcEnabled"));
+    pulseGenerator.setSendClockWhenStopped(*parameters.getRawParameterValue("sendClockWhenStopped"));
+    pulseGenerator.setSendMMCCommands(*parameters.getRawParameterValue("sendMMCCommands"));
+    pulseGenerator.setSendSongPositionPointer(*parameters.getRawParameterValue("sendSPP"));
+}
+
+int Pulse24SyncAudioProcessor::getPPQNValueFromIndex(int index)
+{
+    switch (index)
+    {
+        case 0: return 24;   // 24 PPQN
+        case 1: return 48;   // 48 PPQN
+        case 2: return 96;   // 96 PPQN
+        case 3: return 192;  // 192 PPQN
+        case 4: return 480;  // 480 PPQN
+        default: return 24;
+    }
 }
 
 bool Pulse24SyncAudioProcessor::hasEditor() const
