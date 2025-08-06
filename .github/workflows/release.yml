@@ -209,73 +209,99 @@ jobs:
           Get-ChildItem -Path . -Recurse -Name "*.build" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
           Get-ChildItem -Path . -Recurse -Name ".vs" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
 
-      - name: Show build status
+      - name: Show build status (macOS)
+        if: matrix.os == 'macOS'
         run: |
           echo "🔨 Built from source using pre-installed build tools"
-          
-          # Show what artifacts were built
-          if [ "${{ matrix.os }}" = "macOS" ]; then
-            echo "📦 macOS artifacts:"
-            find Builds/MacOSX/build/Release/ -name "*.vst3" -o -name "*.component" -o -name "*.app" 2>/dev/null || echo "  (checking built artifacts...)"
-          else
-            echo "📦 Windows artifacts:"
-            find Builds/VisualStudio2022/x64/Release/ -name "*.vst3" -o -name "*.exe" 2>/dev/null || echo "  (checking built artifacts...)"
-          fi
+          echo "📦 macOS artifacts:"
+          find Builds/MacOSX/build/Release/ -name "*.vst3" -o -name "*.component" -o -name "*.app" 2>/dev/null || echo "  (checking built artifacts...)"
+
+      - name: Show build status (Windows)
+        if: matrix.os == 'Windows'
+        shell: powershell
+        run: |
+          Write-Host "🔨 Built from source using pre-installed build tools"
+          Write-Host "📦 Windows artifacts:"
+
+          $artifacts = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\" -Recurse -Include "*.vst3", "*.exe" -ErrorAction SilentlyContinue
+          if ($artifacts) {
+            $artifacts | ForEach-Object { Write-Host "  $($_.Name)" }
+          } else {
+            Write-Host "  (checking built artifacts...)"
+          }
 
       # Verify that we have valid build artifacts (either cached or freshly built)
-      - name: Validate build artifacts
+      - name: Validate build artifacts (macOS)
+        if: matrix.os == 'macOS'
         run: |
           echo "🔍 Validating build artifacts..."
           artifacts_found=false
 
-          if [ "${{ matrix.os }}" = "macOS" ]; then
-            # Check for macOS artifacts
-            if [ -d "Builds/MacOSX/build/Release" ]; then
-              echo "✅ macOS build directory exists"
+          # Check for macOS artifacts
+          if [ -d "Builds/MacOSX/build/Release" ]; then
+            echo "✅ macOS build directory exists"
 
-              # Look for expected plugin formats
-              if find Builds/MacOSX/build/Release -name "*.vst3" | grep -q .; then
-                echo "✅ VST3 plugin found"
-                artifacts_found=true
-              fi
-              if find Builds/MacOSX/build/Release -name "*.component" | grep -q .; then
-                echo "✅ Audio Unit plugin found"
-                artifacts_found=true
-              fi
-              if find Builds/MacOSX/build/Release -name "*.app" | grep -q .; then
-                echo "✅ Standalone app found"
-                artifacts_found=true
-              fi
+            # Look for expected plugin formats
+            if find Builds/MacOSX/build/Release -name "*.vst3" | grep -q .; then
+              echo "✅ VST3 plugin found"
+              artifacts_found=true
             fi
-          else
-            # Check for Windows artifacts
-            if [ -d "Builds/VisualStudio2022/x64/Release" ]; then
-              echo "✅ Windows build directory exists"
-
-              # Look for expected plugin formats
-              if find Builds/VisualStudio2022/x64/Release -name "*.vst3" | grep -q .; then
-                echo "✅ VST3 plugin found"
-                artifacts_found=true
-              fi
-              if find Builds/VisualStudio2022/x64/Release -name "*.exe" | grep -q .; then
-                echo "✅ Standalone executable found"
-                artifacts_found=true
-              fi
+            if find Builds/MacOSX/build/Release -name "*.component" | grep -q .; then
+              echo "✅ Audio Unit plugin found"
+              artifacts_found=true
+            fi
+            if find Builds/MacOSX/build/Release -name "*.app" | grep -q .; then
+              echo "✅ Standalone app found"
+              artifacts_found=true
             fi
           fi
 
           if [ "$artifacts_found" = "false" ]; then
             echo "❌ No valid build artifacts found!"
             echo "Build directory contents:"
-            if [ "${{ matrix.os }}" = "macOS" ]; then
-              ls -la Builds/MacOSX/build/Release/ 2>/dev/null || echo "Directory not found"
-            else
-              find Builds/VisualStudio2022/x64/Release -type f 2>/dev/null | head -10 || echo "Directory not found"
-            fi
+            ls -la Builds/MacOSX/build/Release/ 2>/dev/null || echo "Directory not found"
             exit 1
           else
             echo "✅ Build artifacts validation passed"
           fi
+
+      - name: Validate build artifacts (Windows)
+        if: matrix.os == 'Windows'
+        shell: powershell
+        run: |
+          Write-Host "🔍 Validating build artifacts..."
+          $artifactsFound = $false
+
+          # Check for Windows artifacts
+          if (Test-Path "Builds\VisualStudio2022\x64\Release") {
+            Write-Host "✅ Windows build directory exists"
+
+            # Look for expected plugin formats
+            $vst3Files = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release" -Recurse -Include "*.vst3" -ErrorAction SilentlyContinue
+            if ($vst3Files) {
+              Write-Host "✅ VST3 plugin found"
+              $artifactsFound = $true
+            }
+
+            $exeFiles = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release" -Recurse -Include "*.exe" -ErrorAction SilentlyContinue
+            if ($exeFiles) {
+              Write-Host "✅ Standalone executable found"
+              $artifactsFound = $true
+            }
+          }
+
+          if (-not $artifactsFound) {
+            Write-Host "❌ No valid build artifacts found!"
+            Write-Host "Build directory contents:"
+            if (Test-Path "Builds\VisualStudio2022\x64\Release") {
+              Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release" -Recurse -File | Select-Object -First 10 | ForEach-Object { Write-Host "  $($_.Name)" }
+            } else {
+              Write-Host "Directory not found"
+            }
+            exit 1
+          } else {
+            Write-Host "✅ Build artifacts validation passed"
+          }
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
