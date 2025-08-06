@@ -14,12 +14,15 @@ jobs:
         include:
           - os: macOS
             artifact-name: macos-builds
-            build-path: Builds/MacOSX/build/Release/
+            build-path: |
+              Builds/MacOSX/build/Release/Pulse24Sync.vst3
+              Builds/MacOSX/build/Release/Pulse24Sync.component
+              Builds/MacOSX/build/Release/Pulse24Sync.app
           - os: Windows
             artifact-name: windows-builds
             build-path: |
-              Builds/VisualStudio2022/x64/Release/
-              Builds/VisualStudio2022/build/Release/
+              Builds/VisualStudio2022/x64/Release/Pulse24Sync.vst3
+              Builds/VisualStudio2022/x64/Release/Pulse24Sync.exe
 
     steps:
       - name: Checkout code
@@ -51,26 +54,26 @@ jobs:
             });
 
             console.log(`Found ${runs.data.workflow_runs.length} successful build runs`);
-            
+
             for (const run of runs.data.workflow_runs) {
               if (run.head_sha === '${{ github.sha }}') {
                 console.log(`Found matching run for SHA: ${run.head_sha}, run_id: ${run.id}`);
-                
+
                 // Get artifacts for this run
                 const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   run_id: run.id
                 });
-                
+
                 console.log(`Found ${artifacts.data.artifacts.length} artifacts for run ${run.id}`);
-                
+
                 // Look for build artifacts matching our OS
                 const osArtifactName = '${{ matrix.os }}' === 'macOS' ? 'macos-builds' : 'windows-builds';
                 const buildArtifact = artifacts.data.artifacts.find(a => a.name === osArtifactName);
                 const metadataArtifactName = `build-metadata-${{ matrix.os }}-${{ github.sha }}`;
                 const metadataArtifact = artifacts.data.artifacts.find(a => a.name === metadataArtifactName);
-                
+
                 if (buildArtifact && metadataArtifact) {
                   console.log(`Found cached build artifacts: ${buildArtifact.name}`);
                   core.setOutput('found_artifacts', 'true');
@@ -81,7 +84,7 @@ jobs:
                 }
               }
             }
-            
+
             console.log('No matching cached artifacts found');
             core.setOutput('found_artifacts', 'false');
 
@@ -114,22 +117,20 @@ jobs:
             current_hash="${{ steps.check_artifacts.outputs.current_hash }}"
             echo "Cached hash: $cached_hash"
             echo "Current hash: $current_hash"
-            
+
             if [ "$cached_hash" = "$current_hash" ]; then
               echo "✅ Cached artifacts are valid for current source code"
               echo "cache_valid=true" >> $GITHUB_OUTPUT
-              
+
               # Copy cached builds to expected location
               if [ "${{ matrix.os }}" = "macOS" ]; then
                 mkdir -p Builds/MacOSX/build/Release/
                 cp -r cached-builds/* Builds/MacOSX/build/Release/
               else
                 mkdir -p Builds/VisualStudio2022/x64/Release/
-                mkdir -p Builds/VisualStudio2022/build/Release/
-                cp -r cached-builds/* Builds/VisualStudio2022/x64/Release/ 2>/dev/null || true
-                cp -r cached-builds/* Builds/VisualStudio2022/build/Release/ 2>/dev/null || true
+                cp -r cached-builds/* Builds/VisualStudio2022/x64/Release/
               fi
-              
+
               echo "📦 Using cached build artifacts from run ${{ steps.download_artifacts.outputs.run_id }}"
             else
               echo "❌ Cached artifacts are outdated (source code changed)"
@@ -162,7 +163,6 @@ jobs:
             ~/Library/Developer/Xcode/DerivedData
             Builds/MacOSX/build
             Builds\VisualStudio2022\x64\Release
-            Builds\VisualStudio2022\Release
             $env:TEMP\vs-cache
           key: ${{ runner.os }}-build-cache-${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}
           restore-keys: |
@@ -342,7 +342,7 @@ jobs:
         run: |
           # Clean up temporary files
           Get-ChildItem -Path . -Recurse -Include @("*.tmp", "*.temp", "*~", "Thumbs.db", "ehthumbs.db") -Force | Remove-Item -Force -ErrorAction SilentlyContinue
-          
+
           # Clean up Visual Studio temporary files
           Get-ChildItem -Path . -Recurse -Name "*.build" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
           Get-ChildItem -Path . -Recurse -Name ".vs" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
@@ -352,14 +352,14 @@ jobs:
           if [ "${{ steps.verify_cache.outputs.cache_valid }}" = "true" ]; then
             echo "🚀 Used cached build artifacts - skipped compilation"
             echo "📊 Build time saved by reusing artifacts from successful PR build"
-            
+
             # Show what artifacts were cached
             if [ "${{ matrix.os }}" = "macOS" ]; then
               echo "📦 macOS artifacts:"
               find Builds/MacOSX/build/Release/ -name "*.vst3" -o -name "*.component" -o -name "*.app" 2>/dev/null || echo "  (checking cached artifacts...)"
             else
               echo "📦 Windows artifacts:"
-              find Builds/VisualStudio2022/ -name "*.vst3" -o -name "*.exe" 2>/dev/null || echo "  (checking cached artifacts...)"
+              find Builds/VisualStudio2022/x64/Release/ -name "*.vst3" -o -name "*.exe" 2>/dev/null || echo "  (checking cached artifacts...)"
             fi
           else
             echo "🔨 Built from source - no suitable cached artifacts found"
@@ -370,12 +370,12 @@ jobs:
         run: |
           echo "🔍 Validating build artifacts..."
           artifacts_found=false
-          
+
           if [ "${{ matrix.os }}" = "macOS" ]; then
             # Check for macOS artifacts
             if [ -d "Builds/MacOSX/build/Release" ]; then
               echo "✅ macOS build directory exists"
-              
+
               # Look for expected plugin formats
               if find Builds/MacOSX/build/Release -name "*.vst3" | grep -q .; then
                 echo "✅ VST3 plugin found"
@@ -392,28 +392,28 @@ jobs:
             fi
           else
             # Check for Windows artifacts
-            if [ -d "Builds/VisualStudio2022" ]; then
+            if [ -d "Builds/VisualStudio2022/x64/Release" ]; then
               echo "✅ Windows build directory exists"
-              
+
               # Look for expected plugin formats
-              if find Builds/VisualStudio2022 -name "*.vst3" | grep -q .; then
+              if find Builds/VisualStudio2022/x64/Release -name "*.vst3" | grep -q .; then
                 echo "✅ VST3 plugin found"
                 artifacts_found=true
               fi
-              if find Builds/VisualStudio2022 -name "*.exe" | grep -q .; then
+              if find Builds/VisualStudio2022/x64/Release -name "*.exe" | grep -q .; then
                 echo "✅ Standalone executable found"
                 artifacts_found=true
               fi
             fi
           fi
-          
+
           if [ "$artifacts_found" = "false" ]; then
             echo "❌ No valid build artifacts found!"
             echo "Build directory contents:"
             if [ "${{ matrix.os }}" = "macOS" ]; then
               ls -la Builds/MacOSX/build/Release/ 2>/dev/null || echo "Directory not found"
             else
-              find Builds/VisualStudio2022 -type f 2>/dev/null | head -10 || echo "Directory not found"
+              find Builds/VisualStudio2022/x64/Release -type f 2>/dev/null | head -10 || echo "Directory not found"
             fi
             exit 1
           else
@@ -476,6 +476,9 @@ jobs:
           ls -la ./artifacts/
           ls -la ./artifacts/macos-builds/ || echo "macos-builds not found"
           ls -la ./artifacts/windows-builds/ || echo "windows-builds not found"
+          echo "=== File Sizes ==="
+          du -sh ./artifacts/macos-builds/ || echo "macos-builds not found"
+          du -sh ./artifacts/windows-builds/ || echo "windows-builds not found"
 
       - name: Create release packages
         run: |
