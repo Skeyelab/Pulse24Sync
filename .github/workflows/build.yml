@@ -8,26 +8,22 @@ on:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-24.04
-    if: false  # Disabled - set to true to enable
+    runs-on: [self-hosted, ubuntu-24.04]
+    if: true  # Enabled for Linux builds
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Linux with Docker and CMake
+      - name: Install dependencies
         run: |
-          # Create a Dockerfile for the build environment
-          cat > Dockerfile << 'EOF'
-          FROM ubuntu:24.04
-
-          # Install dependencies
-          RUN apt-get update && apt-get install -y \
+          sudo apt-get update
+          sudo apt-get install -y \
             build-essential \
             cmake \
             git \
             libasound2-dev \
             libjack-jackd2-dev \
-            libfreetype6-dev \
+            libfreetype-dev \
             libcurl4-openssl-dev \
             libwebkit2gtk-4.1-dev \
             libgtk-3-dev \
@@ -36,61 +32,86 @@ jobs:
             libxinerama-dev \
             libxcursor-dev \
             libxi-dev \
-            pkg-config \
-            && rm -rf /var/lib/apt/lists/*
+            pkg-config
 
-          # Set working directory
-          WORKDIR /workspace
+      - name: Setup JUCE and Projucer
+        run: |
+          echo "Setting up JUCE and Projucer for Linux build..."
 
-          # Copy project files
-          COPY . .
+          # Clone JUCE if not already present
+          if [ ! -d "JUCE" ]; then
+            git clone https://github.com/juce-framework/JUCE.git
+            cd JUCE
+            git checkout 7.0.12
+            cd ..
+          fi
 
-          # Clone JUCE
-          RUN git clone https://github.com/juce-framework/JUCE.git && \
-              cd JUCE && \
-              git checkout 7.0.12
+          # Build Projucer
+          echo "Building Projucer..."
+          cd JUCE/extras/Projucer/Builds/LinuxMakefile
+          make -j$(nproc)
 
-          # Create build directory and build with CMake
-          RUN mkdir -p build && \
-              cd build && \
-              cmake .. -DCMAKE_BUILD_TYPE=Release \
-                -DJUCE_BUILD_EXTRAS=OFF \
-                -DJUCE_BUILD_EXAMPLES=OFF \
-                -DJUCE_ENABLE_MODULE_SOURCE_GROUPS=ON && \
-              make -j$(nproc)
+          # Check if Projucer was built successfully
+          if [ ! -f "build/Projucer" ]; then
+            echo "Error: Projucer build failed"
+            exit 1
+          fi
 
-          # Keep container running to copy artifacts
-          CMD ["tail", "-f", "/dev/null"]
-          EOF
+          echo "Projucer built successfully"
+          cd ../../../..
 
-          # Build and run the Docker container
-          docker build -t pulse24sync-build .
-          docker run -d --name build-container pulse24sync-build tail -f /dev/null
+      - name: Generate Linux project files
+        run: |
+          echo "Generating Linux project files with Projucer..."
 
-          # Copy build artifacts from container
-          docker cp build-container:/workspace/build ./linux-builds
+          # Use the built Projucer to generate project files
+          JUCE/extras/Projucer/Builds/LinuxMakefile/build/Projucer --resave Pulse24Sync.jucer
 
-      - name: Cleanup Docker resources
+          # Give Projucer time to finish writing files
+          sleep 3
+
+          # Check if project files were created
+          if [ ! -d "Builds/LinuxMakefile" ]; then
+            echo "Error: Linux Makefile project files were not created"
+            echo "Contents of current directory:"
+            ls -la
+            if [ -d "Builds" ]; then
+              echo "Contents of Builds directory:"
+              ls -la Builds/
+            fi
+            exit 1
+          fi
+
+          echo "Linux project files generated successfully"
+
+      - name: Build Linux Plugin
+        run: |
+          echo "Building Pulse24Sync plugin for Linux..."
+
+          # Build the project using make
+          cd Builds/LinuxMakefile
+          make -j$(nproc) CONFIG=Release
+
+          if [ $? -ne 0 ]; then
+            echo "Build failed"
+            exit 1
+          fi
+
+          echo "Build completed successfully"
+
+      - name: Cleanup Linux build artifacts
         if: always()
         run: |
-          # Stop and remove container
-          docker stop build-container || true
-          docker rm build-container || true
-          
-          # Remove Docker image
-          docker rmi pulse24sync-build || true
-          
-          # Clean up dangling images and containers
-          docker system prune -f || true
-          
-          # Remove temporary Dockerfile
-          rm -f Dockerfile
+          # Clean up temporary files
+          find . -name "*.tmp" -o -name "*.temp" -o -name "*~" -type f -delete 2>/dev/null || true
+          find . -name "*.o" -type f -delete 2>/dev/null || true
+          find . -name "*.a" -type f -delete 2>/dev/null || true
 
       - name: Upload Linux build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-builds
-          path: linux-builds/
+          path: Builds/LinuxMakefile/build/
 
   build-macos:
     runs-on: macOS
@@ -300,7 +321,7 @@ jobs:
         run: |
           # Clean up temporary files
           Get-ChildItem -Path . -Recurse -Include @("*.tmp", "*.temp", "*~", "Thumbs.db", "ehthumbs.db") -Force | Remove-Item -Force -ErrorAction SilentlyContinue
-          
+
           # Clean up Visual Studio temporary files
           Get-ChildItem -Path . -Recurse -Name "*.build" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
           Get-ChildItem -Path . -Recurse -Name ".vs" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
