@@ -87,16 +87,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cache JUCE modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Library/Caches/JUCE
-            /Applications/JUCE 2/modules
-          key: ${{ runner.os }}-juce-modules-${{ hashFiles('Pulse24Sync.jucer') }}
-          restore-keys: |
-            ${{ runner.os }}-juce-modules-
-
       - name: Cache Xcode build
         uses: actions/cache@v4
         with:
@@ -198,24 +188,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cache JUCE modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            Builds\VisualStudio2022\build
-            $env:LOCALAPPDATA\Microsoft\VisualStudio\*\MSBuild\Current\Bin\Roslyn
-            $env:TEMP\juce-cache
-          key: ${{ runner.os }}-juce-modules-${{ hashFiles('Pulse24Sync.jucer') }}
-          restore-keys: |
-            ${{ runner.os }}-juce-modules-
-
       - name: Cache Visual Studio build
         uses: actions/cache@v4
         with:
           path: |
             Builds\VisualStudio2022\x64\Release
             Builds\VisualStudio2022\Release
-            $env:TEMP\vs-cache
           key: ${{ runner.os }}-vs-build-${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}
           restore-keys: |
             ${{ runner.os }}-vs-build-
