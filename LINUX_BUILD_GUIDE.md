@@ -161,6 +161,18 @@ rm -rf build
 ./build.sh
 ```
 
+## Performance Optimizations
+
+The build system includes comprehensive caching to speed up subsequent builds:
+
+- **ccache**: Automatically installed and configured for faster C++ compilation
+- **Build Artifacts**: CMake build files are cached between builds
+- **Dependencies**: System packages are cached to avoid re-downloads
+
+For detailed information about caching optimizations, see [CACHING_OPTIMIZATIONS.md](CACHING_OPTIMIZATIONS.md).
+
 ## Success! 🎉
 
 Your Linux build environment is now properly configured and the Pulse24Sync VST plugin should build successfully!
+
+**Performance**: First build ~15-20 minutes, subsequent builds ~2-5 minutes with caching! ⚡
