@@ -130,10 +130,10 @@ void Pulse24SyncAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
 #endif
 
     // Get host tempo information
-    juce::AudioPlayHead* playHead = getPlayHead();
-    if (playHead != nullptr)
+    juce::AudioPlayHead* audioPlayHead = getPlayHead();
+    if (audioPlayHead != nullptr)
     {
-        auto posInfo = playHead->getPosition();
+        auto posInfo = audioPlayHead->getPosition();
         if (posInfo.hasValue())
         {
             pulseGenerator.setHostTempo(posInfo->getBpm().orFallback(120.0));

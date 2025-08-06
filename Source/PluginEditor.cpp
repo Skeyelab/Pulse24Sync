@@ -86,14 +86,14 @@ void Pulse24SyncAudioProcessorEditor::setupUI()
     // Title label
     addAndMakeVisible(titleLabel);
     titleLabel.setText("Pulse24Sync", juce::dontSendNotification);
-    titleLabel.setFont(juce::Font(20.0f, juce::Font::bold));
+    titleLabel.setFont(juce::FontOptions(20.0f).withStyle(juce::Font::bold));
     titleLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     titleLabel.setJustificationType(juce::Justification::centred);
 
     // Status label
     addAndMakeVisible(statusLabel);
     statusLabel.setText("Status: Ready", juce::dontSendNotification);
-    statusLabel.setFont(juce::Font(12.0f));
+    statusLabel.setFont(juce::FontOptions(12.0f));
     statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
     statusLabel.setJustificationType(juce::Justification::centred);
 
@@ -106,7 +106,7 @@ void Pulse24SyncAudioProcessorEditor::setupUI()
     // Velocity slider
     addAndMakeVisible(velocityLabel);
     velocityLabel.setText("Pulse Velocity", juce::dontSendNotification);
-    velocityLabel.setFont(juce::Font(12.0f));
+    velocityLabel.setFont(juce::FontOptions(12.0f));
     velocityLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     velocityLabel.setJustificationType(juce::Justification::centred);
 
@@ -119,7 +119,7 @@ void Pulse24SyncAudioProcessorEditor::setupUI()
     // Channel slider
     addAndMakeVisible(channelLabel);
     channelLabel.setText("MIDI Channel", juce::dontSendNotification);
-    channelLabel.setFont(juce::Font(12.0f));
+    channelLabel.setFont(juce::FontOptions(12.0f));
     channelLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     channelLabel.setJustificationType(juce::Justification::centred);
 
@@ -132,7 +132,7 @@ void Pulse24SyncAudioProcessorEditor::setupUI()
     // Sync mode combo box
     addAndMakeVisible(syncModeLabel);
     syncModeLabel.setText("Sync Mode", juce::dontSendNotification);
-    syncModeLabel.setFont(juce::Font(12.0f));
+    syncModeLabel.setFont(juce::FontOptions(12.0f));
     syncModeLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     syncModeLabel.setJustificationType(juce::Justification::centred);
 
@@ -146,7 +146,7 @@ void Pulse24SyncAudioProcessorEditor::setupUI()
     // Manual BPM slider
     addAndMakeVisible(manualBPMLabel);
     manualBPMLabel.setText("Manual BPM", juce::dontSendNotification);
-    manualBPMLabel.setFont(juce::Font(12.0f));
+    manualBPMLabel.setFont(juce::FontOptions(12.0f));
     manualBPMLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     manualBPMLabel.setJustificationType(juce::Justification::centred);
 
@@ -166,13 +166,13 @@ void Pulse24SyncAudioProcessorEditor::setupUI()
     // Link peer count labels
     addAndMakeVisible(linkPeerCountDescLabel);
     linkPeerCountDescLabel.setText("Link Peers:", juce::dontSendNotification);
-    linkPeerCountDescLabel.setFont(juce::Font(12.0f));
+    linkPeerCountDescLabel.setFont(juce::FontOptions(12.0f));
     linkPeerCountDescLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     linkPeerCountDescLabel.setJustificationType(juce::Justification::centredLeft);
 
     addAndMakeVisible(linkPeerCountLabel);
     linkPeerCountLabel.setText("0", juce::dontSendNotification);
-    linkPeerCountLabel.setFont(juce::Font(12.0f));
+    linkPeerCountLabel.setFont(juce::FontOptions(12.0f));
     linkPeerCountLabel.setColour(juce::Label::textColourId, juce::Colours::lightblue);
     linkPeerCountLabel.setJustificationType(juce::Justification::centredLeft);
 #endif

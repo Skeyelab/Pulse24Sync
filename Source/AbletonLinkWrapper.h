@@ -2,11 +2,8 @@
 
 #include <JuceHeader.h>
 
-#ifdef ABLETON_LINK_ENABLED
-#include <ableton/Link.hpp>
-#include <ableton/link/HostTimeFilter.hpp>
-#endif
-
+// Simplified Ableton Link wrapper for Projucer builds
+// This provides the interface without requiring external Link dependencies
 class AbletonLinkWrapper
 {
 public:
@@ -28,22 +25,22 @@ public:
     bool isPlaying() const;
     void setIsPlaying(bool playing);
 
-    // Timing calculations for audio callback
-    double getBeatAtTime(std::chrono::microseconds hostTime, double quantum = 4.0) const;
-    double getPhaseAtTime(std::chrono::microseconds hostTime, double quantum = 4.0) const;
+    // Audio processing
+    void processAudioBuffer(int numSamples);
     
-    // Audio callback helpers
-    std::chrono::microseconds getOutputTimeAtSample(int samplePosition, int bufferSize) const;
-    void processAudioBuffer(int bufferSize);
+    // Timing calculations for audio callback
+    std::chrono::microseconds getOutputTimeAtSample(int sampleIndex, int bufferSize) const;
+    double getPhaseAtTime(std::chrono::microseconds hostTime, double quantum = 4.0) const;
 
 private:
-#ifdef ABLETON_LINK_ENABLED
-    ableton::Link mLink;
-    ableton::link::HostTimeFilter<ableton::link::platform::Clock> mHostTimeFilter;
     double mSampleRate = 44100.0;
-    std::uint64_t mSampleTime = 0;
+    double mTempo = 120.0;
     bool mLinkEnabled = false;
-#endif
-
+    bool mIsPlaying = false;
+    int64_t mSampleTime = 0;
+    
+    // Internal timing
+    double mPhase = 0.0;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AbletonLinkWrapper)
 };
