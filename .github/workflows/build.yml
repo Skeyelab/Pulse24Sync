@@ -14,14 +14,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cache Linux dependencies
-        uses: actions/cache@v4
-        with:
-          path: /var/cache/apt/archives
-          key: ${{ runner.os }}-dependencies-${{ hashFiles('**/install-linux-deps.sh') }}
-          restore-keys: |
-            ${{ runner.os }}-dependencies-
-
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
@@ -43,8 +35,6 @@ jobs:
             libxcomposite-dev \
             libgtk-3-dev
 
-
-
       - name: Verify dependencies
         run: |
           echo "Verifying required packages are available:"
@@ -60,31 +50,33 @@ jobs:
         run: |
           echo "Building Pulse24Sync VST Plugin for Linux..."
           chmod +x build.sh
-          
-
-          
           ./build.sh
 
-
-
-      - name: Verify build outputs
+      - name: Create clean distribution
         run: |
-          echo "Checking build artifacts:"
-          ls -la build/Pulse24Sync_artefacts/Release/
+          echo "Creating clean distribution for Linux..."
+          # For Linux, we'll create a simple distribution from the build artifacts
+          mkdir -p dist
+          if [ -d "build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3" ]; then
+            cp -R build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3 dist/
+          fi
+          if [ -f "build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync" ]; then
+            cp build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync dist/
+          fi
+
+      - name: Verify distribution
+        run: |
+          echo "Checking distribution artifacts:"
+          ls -la dist/
           echo ""
-          echo "VST3 Plugin:"
-          ls -la build/Pulse24Sync_artefacts/Release/VST3/
-          echo ""
-          echo "Standalone Application:"
-          ls -la build/Pulse24Sync_artefacts/Release/Standalone/
+          echo "Distribution size:"
+          du -sh dist/*
 
       - name: Upload Linux build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-builds
-          path: |
-            build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3/
-            build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync
+          path: dist/
 
   build-macos:
     runs-on: macOS
@@ -171,6 +163,21 @@ jobs:
 
           echo "Build completed successfully"
 
+      - name: Create clean distribution
+        run: |
+          echo "Creating clean distribution for macOS..."
+          cd Builds/MacOSX/build/Release
+          chmod +x $GITHUB_WORKSPACE/create-macos-distribution.sh
+          $GITHUB_WORKSPACE/create-macos-distribution.sh
+
+      - name: Verify distribution
+        run: |
+          echo "Checking distribution artifacts:"
+          ls -la Builds/MacOSX/build/Release/dist/
+          echo ""
+          echo "Distribution size:"
+          du -sh Builds/MacOSX/build/Release/dist/*
+
       - name: Cleanup macOS build artifacts
         if: always()
         run: |
@@ -184,7 +191,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-builds
-          path: Builds/MacOSX/build/Release/
+          path: Builds/MacOSX/build/Release/dist/
 
   build-windows:
     runs-on: Windows
@@ -288,13 +295,56 @@ jobs:
 
           echo Build completed successfully
 
+      - name: Create clean distribution
+        shell: cmd
+        run: |
+          echo Creating clean distribution for Windows...
+          cd Builds\VisualStudio2022\x64\Release
+
+          REM Check if we have the build files
+          if not exist "VST3\Pulse24Sync.vst3" (
+              echo ERROR: VST3 plugin not found at VST3\Pulse24Sync.vst3
+              exit /b 1
+          )
+
+          echo 📦 Creating clean distribution from existing build...
+
+          REM Create distribution directory
+          if exist "dist" rd /s /q "dist" >nul 2>&1
+          mkdir "dist"
+
+          REM Copy VST3 plugin
+          echo   - Copying VST3 plugin...
+          xcopy "VST3\Pulse24Sync.vst3" "dist\Pulse24Sync.vst3\" /E /I /Y >nul
+
+          REM Copy standalone application
+          if exist "Standalone Plugin\Pulse24Sync.exe" (
+              echo   - Copying standalone application...
+              copy "Standalone Plugin\Pulse24Sync.exe" "dist\Pulse24Sync.exe" >nul
+          )
+
+          echo 📊 Distribution created in 'dist' folder:
+          if exist "dist" (
+              for /f "tokens=*" %%i in ('dir /s "dist" ^| find "File(s)"') do echo   %%i
+              for /f "tokens=*" %%i in ('dir /s "dist" ^| find "Dir(s)"') do echo   %%i
+          )
+
+      - name: Verify distribution
+        shell: cmd
+        run: |
+          echo Checking distribution artifacts:
+          dir Builds\VisualStudio2022\x64\Release\dist
+          echo.
+          echo Distribution size:
+          dir Builds\VisualStudio2022\x64\Release\dist /s
+
       - name: Cleanup Windows build artifacts
         if: always()
         shell: powershell
         run: |
           # Clean up temporary files
           Get-ChildItem -Path . -Recurse -Include @("*.tmp", "*.temp", "*~", "Thumbs.db", "ehthumbs.db") -Force | Remove-Item -Force -ErrorAction SilentlyContinue
-          
+
           # Clean up Visual Studio temporary files
           Get-ChildItem -Path . -Recurse -Name "*.build" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
           Get-ChildItem -Path . -Recurse -Name ".vs" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
@@ -303,6 +353,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-builds
-          path: |
-            Builds/VisualStudio2022/x64/Release/
-            Builds/VisualStudio2022/build/Release/
+          path: Builds/VisualStudio2022/x64/Release/dist/

@@ -1,3 +1,4 @@
+@ -1,82 +0,0 @@
 #!/bin/bash
 
 # Pulse24Sync VST Plugin Build Script
@@ -9,20 +10,20 @@ set -e  # Exit on any error
 cleanup() {
     local exit_code=$?
     echo "🧹 Performing cleanup..."
-    
+
     # Clean up CMake cache and temporary files if build failed
     if [ $exit_code -ne 0 ] && [ -d "build" ]; then
         echo "  - Cleaning up failed build artifacts..."
         rm -rf build/CMakeCache.txt build/CMakeFiles/ build/*.cmake 2>/dev/null || true
     fi
-    
+
     # Clean up any temporary files that might have been created
     find . -name "*.tmp" -o -name "*.temp" -o -name "*~" -type f -delete 2>/dev/null || true
-    
+
     if [ $exit_code -ne 0 ]; then
         echo "❌ Build failed - temporary files cleaned up"
     fi
-    
+
     exit $exit_code
 }
 
