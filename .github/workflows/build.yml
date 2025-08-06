@@ -87,26 +87,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cache JUCE modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Library/Caches/JUCE
-            /Applications/JUCE 2/modules
-          key: ${{ runner.os }}-juce-modules-${{ hashFiles('Pulse24Sync.jucer') }}
-          restore-keys: |
-            ${{ runner.os }}-juce-modules-
-
-      - name: Cache Xcode build
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Library/Developer/Xcode/DerivedData
-            Builds/MacOSX/build
-          key: ${{ runner.os }}-xcode-build-${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}
-          restore-keys: |
-            ${{ runner.os }}-xcode-build-
-
       - name: Setup JUCE and Projucer
         run: |
           # Use pre-installed JUCE at /Applications/JUCE 2
@@ -190,23 +170,6 @@ jobs:
         with:
           name: macos-builds
           path: Builds/MacOSX/build/Release/
-          retention-days: 30
-
-      # Store build metadata for release workflow to use
-      - name: Store build metadata
-        run: |
-          mkdir -p build-metadata
-          echo "${{ github.sha }}" > build-metadata/commit-sha
-          echo "${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}" > build-metadata/source-hash
-          echo "${{ github.run_id }}" > build-metadata/run-id
-          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build-metadata/build-time
-
-      - name: Upload build metadata
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-metadata-${{ runner.os }}-${{ github.sha }}
-          path: build-metadata/
-          retention-days: 30
 
   build-windows:
     runs-on: Windows
@@ -214,28 +177,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Cache JUCE modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            Builds\VisualStudio2022\build
-            $env:LOCALAPPDATA\Microsoft\VisualStudio\*\MSBuild\Current\Bin\Roslyn
-            $env:TEMP\juce-cache
-          key: ${{ runner.os }}-juce-modules-${{ hashFiles('Pulse24Sync.jucer') }}
-          restore-keys: |
-            ${{ runner.os }}-juce-modules-
-
-      - name: Cache Visual Studio build
-        uses: actions/cache@v4
-        with:
-          path: |
-            Builds\VisualStudio2022\x64\Release
-            Builds\VisualStudio2022\Release
-            $env:TEMP\vs-cache
-          key: ${{ runner.os }}-vs-build-${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}
-          restore-keys: |
-            ${{ runner.os }}-vs-build-
 
       - name: Setup JUCE and Projucer
         shell: powershell
@@ -339,20 +280,3 @@ jobs:
           path: |
             Builds/VisualStudio2022/x64/Release/
             Builds/VisualStudio2022/build/Release/
-          retention-days: 30
-
-      # Store build metadata for release workflow to use
-      - name: Store build metadata
-        run: |
-          mkdir -p build-metadata
-          echo "${{ github.sha }}" > build-metadata/commit-sha
-          echo "${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}" > build-metadata/source-hash
-          echo "${{ github.run_id }}" > build-metadata/run-id
-          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build-metadata/build-time
-
-      - name: Upload build metadata
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-metadata-${{ runner.os }}-${{ github.sha }}
-          path: build-metadata/
-          retention-days: 30
