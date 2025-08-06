@@ -14,14 +14,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cache Linux dependencies
-        uses: actions/cache@v4
-        with:
-          path: /var/cache/apt/archives
-          key: ${{ runner.os }}-dependencies-${{ hashFiles('**/install-linux-deps.sh') }}
-          restore-keys: |
-            ${{ runner.os }}-dependencies-
-
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
