@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-linux:
-    runs-on: [self-hosted, ubuntu-24.04]
+    runs-on: self-hosted
     if: true  # Enabled for Linux builds
     steps:
       - name: Checkout code
