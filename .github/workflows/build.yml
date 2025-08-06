@@ -308,7 +308,7 @@ jobs:
         run: |
           echo Creating clean distribution for Windows...
           cd Builds\VisualStudio2022\x64\Release
-          ..\..\..\create-windows-distribution.bat
+          %GITHUB_WORKSPACE%\create-windows-distribution.bat
 
       - name: Verify distribution
         shell: cmd
