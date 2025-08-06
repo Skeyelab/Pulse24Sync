@@ -402,41 +402,29 @@ jobs:
 
       - name: Validate build artifacts (Windows)
         if: matrix.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          Write-Host "🔍 Validating build artifacts..."
-          $artifactsFound = $false
-
-          # Check for Windows artifacts in distribution directory
-          if (Test-Path "Builds\VisualStudio2022\x64\Release\dist") {
-            Write-Host "Windows distribution directory exists"
-
-            # Look for expected plugin formats
-            $vst3Files = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\dist" -Recurse -Include "*.vst3" -ErrorAction SilentlyContinue
-            if ($vst3Files) {
-              Write-Host "VST3 plugin found"
-              $artifactsFound = $true
-            }
-
-            $exeFiles = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\dist" -Recurse -Include "*.exe" -ErrorAction SilentlyContinue
-            if ($exeFiles) {
-              Write-Host "Standalone executable found"
-              $artifactsFound = $true
-            }
-          }
-
-          if (-not $artifactsFound) {
-            Write-Host "No valid build artifacts found!"
-            Write-Host "Distribution directory contents:"
-            if (Test-Path "Builds\VisualStudio2022\x64\Release\dist") {
-              Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\dist" -Recurse -File | Select-Object -First 10 | ForEach-Object { Write-Host "  $($_.Name)" }
-            } else {
-              Write-Host "Directory not found"
-            }
-            exit 1
-          } else {
-            Write-Host Build artifacts validation passed
-          }
+          echo Validating build artifacts...
+          if exist "Builds\VisualStudio2022\x64\Release\dist" (
+            echo Windows distribution directory exists
+            if exist "Builds\VisualStudio2022\x64\Release\dist\Pulse24Sync.vst3" (
+              echo VST3 plugin found
+              set artifacts_found=true
+            )
+            if exist "Builds\VisualStudio2022\x64\Release\dist\Pulse24Sync.exe" (
+              echo Standalone executable found
+              set artifacts_found=true
+            )
+            if defined artifacts_found (
+              echo Build artifacts validation passed
+            ) else (
+              echo No valid build artifacts found!
+              exit /b 1
+            )
+          ) else (
+            echo No valid build artifacts found!
+            exit /b 1
+          )
 
       - name: Validate build artifacts (Linux)
         if: matrix.os == 'ubuntu-24.04'
