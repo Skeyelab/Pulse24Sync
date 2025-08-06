@@ -1,14 +1,45 @@
 @echo off
+setlocal enabledelayedexpansion
+
 echo ========================================
 echo Pulse24Sync - Windows Build Script
 echo ========================================
 echo.
+
+REM Function to cleanup temporary files
+:cleanup
+echo 🧹 Performing cleanup...
+
+REM Clean up temporary files
+del /s /q *.tmp >nul 2>&1
+del /s /q *.temp >nul 2>&1
+del /s /q *~ >nul 2>&1
+
+REM Clean up Windows system files
+del /s /q Thumbs.db >nul 2>&1
+del /s /q ehthumbs.db >nul 2>&1
+
+REM Clean up Visual Studio temporary files
+for /d /r . %%d in (*.build) do @if exist "%%d" rd /s /q "%%d" >nul 2>&1
+for /d /r . %%d in (.vs) do @if exist "%%d" rd /s /q "%%d" >nul 2>&1
+
+if "%BUILD_FAILED%"=="1" (
+    echo   - Cleaning up failed build artifacts...
+    if exist "Builds\VisualStudio2022\build" rd /s /q "Builds\VisualStudio2022\build" >nul 2>&1
+    echo ❌ Build failed - temporary files cleaned up
+    exit /b 1
+)
+
+echo 🧹 Cleanup completed
+goto :eof
 
 REM Check if Visual Studio is available
 where msbuild >nul 2>&1
 if %errorlevel% neq 0 (
     echo ERROR: MSBuild not found. Please install Visual Studio 2022 with C++ workload.
     echo Download from: https://visualstudio.microsoft.com/downloads/
+    set BUILD_FAILED=1
+    call :cleanup
     pause
     exit /b 1
 )
@@ -22,6 +53,8 @@ msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Plat
 
 if %errorlevel% neq 0 (
     echo ERROR: VST3 build failed!
+    set BUILD_FAILED=1
+    call :cleanup
     pause
     exit /b 1
 )
@@ -32,6 +65,8 @@ msbuild Builds\VisualStudio2022\Pulse24Sync.sln /p:Configuration=Release /p:Plat
 
 if %errorlevel% neq 0 (
     echo ERROR: Standalone build failed!
+    set BUILD_FAILED=1
+    call :cleanup
     pause
     exit /b 1
 )
@@ -64,4 +99,8 @@ echo   C:\Program Files\Common Files\VST3\
 echo.
 echo Then restart your DAW and scan for new plugins.
 echo.
+
+REM Perform cleanup of temporary files (but keep successful build artifacts)
+call :cleanup
+
 pause
