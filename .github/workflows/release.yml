@@ -328,20 +328,20 @@ jobs:
         run: |
           Write-Host "Validating build artifacts..."
           $artifacts_found = $false
-          
+
           if (Test-Path "Builds\VisualStudio2022\x64\Release") {
             Write-Host "Windows build directory exists"
-            
+
             if (Test-Path "Builds\VisualStudio2022\x64\Release\VST3\Pulse24Sync.vst3\Contents\x86_64-win\Pulse24Sync.vst3") {
               Write-Host "VST3 plugin found"
               $artifacts_found = $true
             }
-            
+
             if (Test-Path "Builds\VisualStudio2022\x64\Release\Standalone Plugin\Pulse24Sync.exe") {
               Write-Host "Standalone executable found"
               $artifacts_found = $true
             }
-            
+
             if ($artifacts_found) {
               Write-Host "Build artifacts validation passed"
             } else {
@@ -486,17 +486,17 @@ jobs:
             echo "Creating Windows packages..."
 
             # VST3
-            if [ -d "./artifacts/windows-builds/Pulse24Sync.vst3" ]; then
-              cd ./artifacts/windows-builds
-              zip -r ../../release-packages/Pulse24Sync-Windows-vst3.zip Pulse24Sync.vst3
-              cd ../..
+            if [ -d "./artifacts/windows-builds/VST3/Pulse24Sync.vst3" ]; then
+              cd ./artifacts/windows-builds/VST3
+              zip -r ../../../release-packages/Pulse24Sync-Windows-vst3.zip Pulse24Sync.vst3
+              cd ../../..
             fi
 
             # Standalone
-            if [ -f "./artifacts/windows-builds/Pulse24Sync.exe" ]; then
-              cd ./artifacts/windows-builds
-              zip ../../release-packages/Pulse24Sync-Windows-standalone.zip Pulse24Sync.exe
-              cd ../..
+            if [ -f "./artifacts/windows-builds/Standalone Plugin/Pulse24Sync.exe" ]; then
+              cd "./artifacts/windows-builds/Standalone Plugin"
+              zip ../../../release-packages/Pulse24Sync-Windows-standalone.zip Pulse24Sync.exe
+              cd ../../..
             fi
           fi
 
