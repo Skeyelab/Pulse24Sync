@@ -230,7 +230,7 @@ jobs:
             Write-Host "  (checking built artifacts...)"
           }
 
-      # Verify that we have valid build artifacts (either cached or freshly built)
+      # Verify that we have valid build artifacts
       - name: Validate build artifacts (macOS)
         if: matrix.os == 'macOS'
         run: |
