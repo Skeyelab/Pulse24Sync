@@ -1,0 +1,32 @@
+# Build Artifacts Management
+
+## Release Files Only
+Only include actual plugin files in releases. Exclude all build artifacts and intermediate files.
+
+### Allowed Release Files:
+- **macOS**: `Pulse24Sync.vst3`, `Pulse24Sync.component`, `Pulse24Sync.app`
+- **Windows**: `Pulse24Sync.vst3`, `Pulse24Sync.exe`
+
+### Excluded Files:
+- `juce_vst3_helper` - JUCE build helper (not user-facing)
+- `libPulse24Sync.a` - Static library (build artifact)
+- `*.pdb` - Debug symbols
+- `*.obj`, `*.lib` - Intermediate build files
+- `*.tmp`, `*.temp` - Temporary files
+- `.vs/`, `*.build/` - IDE/build directories
+
+## Build Path Configuration
+In [.github/workflows/release.yml](mdc:.github/workflows/release.yml), use specific file paths, not wildcards:
+```yaml
+build-path: |
+  Builds/MacOSX/build/Release/Pulse24Sync.vst3
+  Builds/MacOSX/build/Release/Pulse24Sync.component
+  Builds/MacOSX/build/Release/Pulse24Sync.app
+```
+
+## Cleanup
+Always clean up build artifacts after successful builds to prevent repository bloat.
+description:
+globs:
+alwaysApply: false
+---

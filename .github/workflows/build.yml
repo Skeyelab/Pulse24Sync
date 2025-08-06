@@ -70,9 +70,21 @@ jobs:
           # Copy build artifacts from container
           docker cp build-container:/workspace/build ./linux-builds
 
-          # Clean up
-          docker stop build-container
-          docker rm build-container
+      - name: Cleanup Docker resources
+        if: always()
+        run: |
+          # Stop and remove container
+          docker stop build-container || true
+          docker rm build-container || true
+          
+          # Remove Docker image
+          docker rmi pulse24sync-build || true
+          
+          # Clean up dangling images and containers
+          docker system prune -f || true
+          
+          # Remove temporary Dockerfile
+          rm -f Dockerfile
 
       - name: Upload Linux build artifacts
         uses: actions/upload-artifact@v4
@@ -164,6 +176,15 @@ jobs:
           fi
 
           echo "Build completed successfully"
+
+      - name: Cleanup macOS build artifacts
+        if: always()
+        run: |
+          # Clean up temporary files
+          find . -name "*.tmp" -o -name "*.temp" -o -name "*~" -type f -delete 2>/dev/null || true
+          find . -name ".DS_Store" -type f -delete 2>/dev/null || true
+          find . -name "*.build" -type d -exec rm -rf {} + 2>/dev/null || true
+          find . -name "DerivedData" -type d -exec rm -rf {} + 2>/dev/null || true
 
       - name: Upload macOS build artifacts
         uses: actions/upload-artifact@v4
@@ -272,6 +293,17 @@ jobs:
           )
 
           echo Build completed successfully
+
+      - name: Cleanup Windows build artifacts
+        if: always()
+        shell: powershell
+        run: |
+          # Clean up temporary files
+          Get-ChildItem -Path . -Recurse -Include @("*.tmp", "*.temp", "*~", "Thumbs.db", "ehthumbs.db") -Force | Remove-Item -Force -ErrorAction SilentlyContinue
+          
+          # Clean up Visual Studio temporary files
+          Get-ChildItem -Path . -Recurse -Name "*.build" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
+          Get-ChildItem -Path . -Recurse -Name ".vs" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
 
       - name: Upload Windows build artifacts
         uses: actions/upload-artifact@v4

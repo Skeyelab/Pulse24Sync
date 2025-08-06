@@ -1,0 +1,41 @@
+# Build Script Standards
+
+## Script Organization
+- Keep build scripts in the root directory
+- Use descriptive names: `build_macos.sh`, `build_windows.bat`
+- Include proper error handling and cleanup
+- Add usage instructions and help text
+
+## Cross-Platform Compatibility
+- Use platform-specific scripts for different build environments
+- Handle path differences between macOS/Linux/Windows
+- Use appropriate shell interpreters (`#!/bin/bash`, `cmd`, `powershell`)
+- Test scripts on target platforms
+
+## Cleanup and Maintenance
+- Always clean up temporary files and build artifacts
+- Use trap handlers for proper cleanup on script exit
+- Remove intermediate build files to save space
+- Implement proper error reporting and logging
+
+## CI/CD Integration
+- Keep GitHub Actions workflows clean and efficient
+- Use caching to speed up builds
+- Implement proper artifact management
+- Only include necessary files in releases
+
+## Build Configuration
+- Use consistent build configurations across platforms
+- Implement proper dependency management
+- Handle JUCE and Projucer setup correctly
+- Use appropriate compiler flags and optimizations
+
+## Documentation
+- Document build requirements and dependencies
+- Include troubleshooting guides for common issues
+- Keep build instructions up to date
+- Provide clear installation and usage instructions
+description:
+globs:
+alwaysApply: false
+---
