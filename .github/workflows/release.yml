@@ -268,25 +268,25 @@ jobs:
       - name: Create release packages
         run: |
           mkdir -p release-packages
-          
+
           # macOS packages
           if [ -d "./artifacts/macos-builds" ]; then
             echo "Creating macOS packages..."
-            
+
             # VST3
             if [ -d "./artifacts/macos-builds/Pulse24Sync.vst3" ]; then
               cd ./artifacts/macos-builds
               zip -r ../../release-packages/Pulse24Sync-macOS-vst3.zip Pulse24Sync.vst3
               cd ../..
             fi
-            
+
             # Audio Unit
             if [ -d "./artifacts/macos-builds/Pulse24Sync.component" ]; then
               cd ./artifacts/macos-builds
               zip -r ../../release-packages/Pulse24Sync-macOS-au.zip Pulse24Sync.component
               cd ../..
             fi
-            
+
             # Standalone
             if [ -d "./artifacts/macos-builds/Pulse24Sync.app" ]; then
               cd ./artifacts/macos-builds
@@ -294,18 +294,18 @@ jobs:
               cd ../..
             fi
           fi
-          
+
           # Windows packages
           if [ -d "./artifacts/windows-builds" ]; then
             echo "Creating Windows packages..."
-            
+
             # VST3
             if [ -d "./artifacts/windows-builds/Pulse24Sync.vst3" ]; then
               cd ./artifacts/windows-builds
               zip -r ../../release-packages/Pulse24Sync-Windows-vst3.zip Pulse24Sync.vst3
               cd ../..
             fi
-            
+
             # Standalone
             if [ -f "./artifacts/windows-builds/Pulse24Sync.exe" ]; then
               cd ./artifacts/windows-builds
@@ -313,7 +313,7 @@ jobs:
               cd ../..
             fi
           fi
-          
+
           echo "Created packages:"
           ls -la release-packages/
 
