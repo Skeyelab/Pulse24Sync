@@ -9,17 +9,17 @@ set -e  # Exit on any error
 cleanup() {
     local exit_code=$?
     echo "🧹 Performing cleanup..."
-    
+
     # Clean up temporary files
     find . -name "*.tmp" -o -name "*.temp" -o -name "*~" -type f -delete 2>/dev/null || true
-    
+
     # Clean up Xcode temporary files
     find . -name "*.build" -type d -exec rm -rf {} + 2>/dev/null || true
     find . -name "DerivedData" -type d -exec rm -rf {} + 2>/dev/null || true
-    
+
     # Clean up macOS system files
     find . -name ".DS_Store" -type f -delete 2>/dev/null || true
-    
+
     if [ $exit_code -ne 0 ]; then
         echo "❌ Build failed - temporary files cleaned up"
         # Clean up failed build artifacts
@@ -28,8 +28,57 @@ cleanup() {
             rm -rf Builds/MacOSX/build
         fi
     fi
-    
+
     exit $exit_code
+}
+
+# Function to create clean distribution
+create_distribution() {
+    echo "📦 Creating clean distribution..."
+
+    # Create distribution directory
+    if [ -d "dist" ]; then
+        rm -rf dist
+    fi
+    mkdir -p dist
+
+    # Copy VST3 plugin
+    if [ -d "Builds/MacOSX/build/Release/Pulse24Sync.vst3" ]; then
+        echo "  - Copying VST3 plugin..."
+        cp -R "Builds/MacOSX/build/Release/Pulse24Sync.vst3" "dist/"
+    fi
+
+    # Copy AU component
+    if [ -d "Builds/MacOSX/build/Release/Pulse24Sync.component" ]; then
+        echo "  - Copying AU component..."
+        cp -R "Builds/MacOSX/build/Release/Pulse24Sync.component" "dist/"
+    fi
+
+    # Copy standalone application
+    if [ -d "Builds/MacOSX/build/Release/Pulse24Sync.app" ]; then
+        echo "  - Copying standalone application..."
+        cp -R "Builds/MacOSX/build/Release/Pulse24Sync.app" "dist/"
+    fi
+
+    # Show distribution size
+    echo ""
+    echo "📊 Distribution created in 'dist' folder:"
+    if [ -d "dist" ]; then
+        du -sh dist/*
+    fi
+
+    echo ""
+    echo "========================================"
+    echo "Clean Distribution Created Successfully!"
+    echo "========================================"
+    echo ""
+    echo "Distribution files are in the 'dist' folder:"
+    echo "  - Pulse24Sync.vst3 (VST3 plugin)"
+    echo "  - Pulse24Sync.component (AU plugin)"
+    echo "  - Pulse24Sync.app (Standalone application)"
+    echo ""
+    echo "These files are ready for distribution to end users."
+    echo ""
 }
 
 # Set trap to ensure cleanup runs on script exit
@@ -72,10 +121,20 @@ xcodebuild -project Builds/MacOSX/Pulse24Sync.xcodeproj -configuration Release -
 
 echo ""
 echo "✅ Build completed successfully!"
-echo "📦 VST3 plugin should be installed to:"
-echo "   ~/Library/Audio/Plug-Ins/VST3/Pulse24Sync.vst3"
-echo "   ~/Library/Audio/Plug-Ins/Components/Pulse24Sync.component"
+
+# Create clean distribution
+create_distribution
+
 echo ""
-echo "🎉 You can now load Pulse24Sync in your DAW!"
+echo "========================================"
+echo "Installation Instructions:"
+echo "========================================"
+echo ""
+echo "To install the plugins, copy the files from the 'dist' folder to:"
+echo "  VST3: ~/Library/Audio/Plug-Ins/VST3/"
+echo "  AU:   ~/Library/Audio/Plug-Ins/Components/"
+echo ""
+echo "Then restart your DAW and scan for new plugins."
+echo ""
 
 # Note: cleanup() will be called automatically, but successful builds keep artifacts
