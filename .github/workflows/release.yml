@@ -435,7 +435,7 @@ jobs:
             }
             exit 1
           } else {
-            Write-Host "Build artifacts validation passed"
+            Write-Host Build artifacts validation passed
           }
 
       - name: Validate build artifacts (Linux)
