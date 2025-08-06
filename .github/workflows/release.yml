@@ -10,20 +10,30 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS, Windows]
+        os: [macOS, Windows, ubuntu-24.04]
         include:
           - os: macOS
             artifact-name: macos-builds
-            build-path: Builds/MacOSX/build/Release/
+            build-path: |
+              Builds/MacOSX/build/Release/Pulse24Sync.vst3
+              Builds/MacOSX/build/Release/Pulse24Sync.component
+              Builds/MacOSX/build/Release/Pulse24Sync.app
           - os: Windows
             artifact-name: windows-builds
             build-path: |
-              Builds/VisualStudio2022/x64/Release/
-              Builds/VisualStudio2022/build/Release/
+              Builds/VisualStudio2022/x64/Release/VST3/Pulse24Sync.vst3/
+              Builds/VisualStudio2022/x64/Release/Standalone Plugin/Pulse24Sync.exe
+          - os: ubuntu-24.04
+            artifact-name: linux-builds
+            build-path: |
+              build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3
+              build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # Build tools are pre-installed, no caching needed
 
       - name: Setup JUCE and Projucer (macOS)
         if: matrix.os == 'macOS'
@@ -150,6 +160,39 @@ jobs:
 
           Write-Host "Project files generated successfully"
 
+      - name: Cache Linux dependencies
+        if: matrix.os == 'ubuntu-24.04'
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-dependencies-${{ hashFiles('**/install-linux-deps.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-dependencies-
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            git \
+            pkg-config \
+            libasound2-dev \
+            libjack-jackd2-dev \
+            libfreetype6-dev \
+            libgl1-mesa-dev \
+            libcurl4-openssl-dev \
+            libx11-dev \
+            libxinerama-dev \
+            libxext-dev \
+            libxrandr-dev \
+            libxcursor-dev \
+            libxcomposite-dev \
+            libgtk-3-dev
+
+
+
       - name: Build macOS Plugin
         if: matrix.os == 'macOS'
         run: |
@@ -164,6 +207,15 @@ jobs:
           fi
 
           echo "Build completed successfully"
+
+      - name: Cleanup macOS build artifacts
+        if: matrix.os == 'macOS' && always()
+        run: |
+          # Clean up temporary files
+          find . -name "*.tmp" -o -name "*.temp" -o -name "*~" -type f -delete 2>/dev/null || true
+          find . -name ".DS_Store" -type f -delete 2>/dev/null || true
+          find . -name "*.build" -type d -exec rm -rf {} + 2>/dev/null || true
+          find . -name "DerivedData" -type d -exec rm -rf {} + 2>/dev/null || true
 
       - name: Build Windows Plugin
         if: matrix.os == 'Windows'
@@ -183,6 +235,161 @@ jobs:
           )
 
           echo Build completed successfully
+
+      - name: Cleanup Windows build artifacts
+        if: matrix.os == 'Windows' && always()
+        shell: powershell
+        run: |
+          # Clean up temporary files
+          Get-ChildItem -Path . -Recurse -Include @("*.tmp", "*.temp", "*~", "Thumbs.db", "ehthumbs.db") -Force | Remove-Item -Force -ErrorAction SilentlyContinue
+
+          # Clean up Visual Studio temporary files
+          Get-ChildItem -Path . -Recurse -Name "*.build" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
+          Get-ChildItem -Path . -Recurse -Name ".vs" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
+
+      - name: Build Linux Plugin
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          echo "Building Pulse24Sync VST Plugin for Linux..."
+          chmod +x build.sh
+
+
+
+          ./build.sh
+
+
+
+      - name: Show build status (macOS)
+        if: matrix.os == 'macOS'
+        run: |
+          echo "🔨 Built from source using pre-installed build tools"
+          echo "📦 macOS artifacts:"
+          find Builds/MacOSX/build/Release/ -name "*.vst3" -o -name "*.component" -o -name "*.app" 2>/dev/null || echo "  (checking built artifacts...)"
+
+      - name: Show build status (Windows)
+        if: matrix.os == 'Windows'
+        shell: powershell
+        run: |
+          Write-Host "🔨 Built from source using pre-installed build tools"
+          Write-Host "📦 Windows artifacts:"
+
+          $artifacts = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\" -Recurse -Include "*.vst3", "*.exe" -ErrorAction SilentlyContinue
+          if ($artifacts) {
+            $artifacts | ForEach-Object { Write-Host "  $($_.Name)" }
+          } else {
+            Write-Host "  (checking built artifacts...)"
+          }
+
+      - name: Show build status (Linux)
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          echo "🔨 Built from source using pre-installed build tools"
+          echo "📦 Linux artifacts:"
+          find build/Pulse24Sync_artefacts/Release/ -name "*.vst3" -o -name "Pulse24Sync" 2>/dev/null || echo "  (checking built artifacts...)"
+
+      # Verify that we have valid build artifacts
+      - name: Validate build artifacts (macOS)
+        if: matrix.os == 'macOS'
+        run: |
+          echo "🔍 Validating build artifacts..."
+          artifacts_found=false
+
+          # Check for macOS artifacts
+          if [ -d "Builds/MacOSX/build/Release" ]; then
+            echo "✅ macOS build directory exists"
+
+            # Look for expected plugin formats
+            if find Builds/MacOSX/build/Release -name "*.vst3" | grep -q .; then
+              echo "✅ VST3 plugin found"
+              artifacts_found=true
+            fi
+            if find Builds/MacOSX/build/Release -name "*.component" | grep -q .; then
+              echo "✅ Audio Unit plugin found"
+              artifacts_found=true
+            fi
+            if find Builds/MacOSX/build/Release -name "*.app" | grep -q .; then
+              echo "✅ Standalone app found"
+              artifacts_found=true
+            fi
+          fi
+
+          if [ "$artifacts_found" = "false" ]; then
+            echo "❌ No valid build artifacts found!"
+            echo "Build directory contents:"
+            ls -la Builds/MacOSX/build/Release/ 2>/dev/null || echo "Directory not found"
+            exit 1
+          else
+            echo "✅ Build artifacts validation passed"
+          fi
+
+      - name: Validate build artifacts (Windows)
+        if: matrix.os == 'Windows'
+        shell: powershell
+        run: |
+          Write-Host "Validating build artifacts..."
+          $artifacts_found = $false
+
+          if (Test-Path "Builds\VisualStudio2022\x64\Release") {
+            Write-Host "Windows build directory exists"
+
+            if (Test-Path "Builds\VisualStudio2022\x64\Release\VST3\Pulse24Sync.vst3\Contents\x86_64-win\Pulse24Sync.vst3") {
+              Write-Host "VST3 plugin found"
+              $artifacts_found = $true
+            }
+
+            if (Test-Path "Builds\VisualStudio2022\x64\Release\Standalone Plugin\Pulse24Sync.exe") {
+              Write-Host "Standalone executable found"
+              $artifacts_found = $true
+            }
+
+            if ($artifacts_found) {
+              Write-Host "Build artifacts validation passed"
+            } else {
+              Write-Host "No valid build artifacts found!"
+              Write-Host "Build directory contents:"
+              Get-ChildItem "Builds\VisualStudio2022\x64\Release" -Recurse | Select-Object FullName
+              exit 1
+            }
+          } else {
+            Write-Host "No valid build artifacts found!"
+            Write-Host "Directory not found"
+            exit 1
+          }
+
+      - name: Validate build artifacts (Linux)
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          echo "🔍 Validating build artifacts..."
+          artifacts_found=false
+
+          # Check for Linux artifacts
+          if [ -d "build/Pulse24Sync_artefacts/Release" ]; then
+            echo "✅ Linux build directory exists"
+
+            # Look for expected plugin formats
+            if find build/Pulse24Sync_artefacts/Release -name "*.vst3" | grep -q .; then
+              echo "✅ VST3 plugin found"
+              artifacts_found=true
+            fi
+
+            if [ -f "build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync" ]; then
+              echo "✅ Standalone executable found"
+              artifacts_found=true
+            fi
+          fi
+
+          if [ "$artifacts_found" = false ]; then
+            echo "❌ No valid build artifacts found!"
+            echo "Build directory contents:"
+            if [ -d "build/Pulse24Sync_artefacts/Release" ]; then
+              find build/Pulse24Sync_artefacts/Release -type f | head -10
+            else
+              echo "Directory not found"
+            fi
+            exit 1
+          else
+            echo "✅ Build artifacts validation passed"
+          fi
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -228,15 +435,84 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload macOS Release Assets
+      - name: List available artifacts
+        run: |
+          echo "=== macOS Artifacts ==="
+          find ./artifacts/macos-builds -type f -name "*.vst3" -o -name "*.component" -o -name "*.app" | head -20
+          echo "=== Windows Artifacts ==="
+          find ./artifacts/windows-builds -type f -name "*.vst3" -o -name "*.exe" | head -20
+          echo "=== All Artifacts Structure ==="
+          find ./artifacts -type f | head -30
+          echo "=== Full Directory Listing ==="
+          ls -la ./artifacts/
+          ls -la ./artifacts/macos-builds/ || echo "macos-builds not found"
+          ls -la ./artifacts/windows-builds/ || echo "windows-builds not found"
+          echo "=== File Sizes ==="
+          du -sh ./artifacts/macos-builds/ || echo "macos-builds not found"
+          du -sh ./artifacts/windows-builds/ || echo "windows-builds not found"
+
+      - name: Create release packages
+        run: |
+          mkdir -p release-packages
+
+          # macOS packages
+          if [ -d "./artifacts/macos-builds" ]; then
+            echo "Creating macOS packages..."
+
+            # VST3
+            if [ -d "./artifacts/macos-builds/Pulse24Sync.vst3" ]; then
+              cd ./artifacts/macos-builds
+              zip -r ../../release-packages/Pulse24Sync-macOS-vst3.zip Pulse24Sync.vst3
+              cd ../..
+            fi
+
+            # Audio Unit
+            if [ -d "./artifacts/macos-builds/Pulse24Sync.component" ]; then
+              cd ./artifacts/macos-builds
+              zip -r ../../release-packages/Pulse24Sync-macOS-au.zip Pulse24Sync.component
+              cd ../..
+            fi
+
+            # Standalone
+            if [ -d "./artifacts/macos-builds/Pulse24Sync.app" ]; then
+              cd ./artifacts/macos-builds
+              zip -r ../../release-packages/Pulse24Sync-macOS-standalone.zip Pulse24Sync.app
+              cd ../..
+            fi
+          fi
+
+          # Windows packages
+          if [ -d "./artifacts/windows-builds" ]; then
+            echo "Creating Windows packages..."
+
+            # VST3
+            if [ -d "./artifacts/windows-builds/VST3/Pulse24Sync.vst3" ]; then
+              cd ./artifacts/windows-builds/VST3
+              zip -r ../../../release-packages/Pulse24Sync-Windows-vst3.zip Pulse24Sync.vst3
+              cd ../../..
+            fi
+
+            # Standalone
+            if [ -f "./artifacts/windows-builds/Standalone Plugin/Pulse24Sync.exe" ]; then
+              cd "./artifacts/windows-builds/Standalone Plugin"
+              zip ../../../release-packages/Pulse24Sync-Windows-standalone.zip Pulse24Sync.exe
+              cd ../../..
+            fi
+          fi
+
+          echo "Created packages:"
+          ls -la release-packages/
+
+      - name: Upload macOS VST3
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/macos-builds/Pulse24Sync.vst3
+          asset_path: ./release-packages/Pulse24Sync-macOS-vst3.zip
           asset_name: Pulse24Sync-macOS-vst3.zip
           asset_content_type: application/zip
+        continue-on-error: true
 
       - name: Upload macOS Audio Unit
         uses: actions/upload-release-asset@v1
@@ -244,9 +520,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/macos-builds/Pulse24Sync.component
+          asset_path: ./release-packages/Pulse24Sync-macOS-au.zip
           asset_name: Pulse24Sync-macOS-au.zip
           asset_content_type: application/zip
+        continue-on-error: true
 
       - name: Upload macOS Standalone
         uses: actions/upload-release-asset@v1
@@ -254,9 +531,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/macos-builds/Pulse24Sync.app
+          asset_path: ./release-packages/Pulse24Sync-macOS-standalone.zip
           asset_name: Pulse24Sync-macOS-standalone.zip
           asset_content_type: application/zip
+        continue-on-error: true
 
       - name: Upload Windows VST3
         uses: actions/upload-release-asset@v1
@@ -264,9 +542,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/windows-builds/Pulse24Sync.vst3
+          asset_path: ./release-packages/Pulse24Sync-Windows-vst3.zip
           asset_name: Pulse24Sync-Windows-vst3.zip
           asset_content_type: application/zip
+        continue-on-error: true
 
       - name: Upload Windows Standalone
         uses: actions/upload-release-asset@v1
@@ -274,6 +553,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/windows-builds/Pulse24Sync.exe
+          asset_path: ./release-packages/Pulse24Sync-Windows-standalone.zip
           asset_name: Pulse24Sync-Windows-standalone.zip
           asset_content_type: application/zip
+        continue-on-error: true

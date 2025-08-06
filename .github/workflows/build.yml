@@ -9,76 +9,74 @@ on:
 jobs:
   build-linux:
     runs-on: ubuntu-24.04
-    if: false  # Disabled - set to true to enable
+    if: true  # Enabled for Linux builds
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Linux with Docker and CMake
+      - name: Install Linux dependencies
         run: |
-          # Create a Dockerfile for the build environment
-          cat > Dockerfile << 'EOF'
-          FROM ubuntu:24.04
-
-          # Install dependencies
-          RUN apt-get update && apt-get install -y \
+          sudo apt-get update
+          sudo apt-get install -y \
             build-essential \
             cmake \
             git \
+            pkg-config \
             libasound2-dev \
             libjack-jackd2-dev \
             libfreetype6-dev \
+            libgl1-mesa-dev \
             libcurl4-openssl-dev \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
             libx11-dev \
-            libxrandr-dev \
             libxinerama-dev \
+            libxext-dev \
+            libxrandr-dev \
             libxcursor-dev \
-            libxi-dev \
-            pkg-config \
-            && rm -rf /var/lib/apt/lists/*
+            libxcomposite-dev \
+            libgtk-3-dev
 
-          # Set working directory
-          WORKDIR /workspace
+      - name: Verify dependencies
+        run: |
+          echo "Verifying required packages are available:"
+          pkg-config --exists alsa && echo "✓ ALSA" || echo "✗ ALSA"
+          pkg-config --exists jack && echo "✓ JACK" || echo "✗ JACK"
+          pkg-config --exists freetype2 && echo "✓ FreeType2" || echo "✗ FreeType2"
+          pkg-config --exists gl && echo "✓ OpenGL" || echo "✗ OpenGL"
+          pkg-config --exists libcurl && echo "✓ cURL" || echo "✗ cURL"
+          cmake --version
+          gcc --version
 
-          # Copy project files
-          COPY . .
+      - name: Build Linux Plugin
+        run: |
+          echo "Building Pulse24Sync VST Plugin for Linux..."
+          chmod +x build.sh
+          ./build.sh
 
-          # Clone JUCE
-          RUN git clone https://github.com/juce-framework/JUCE.git && \
-              cd JUCE && \
-              git checkout 7.0.12
+      - name: Create clean distribution
+        run: |
+          echo "Creating clean distribution for Linux..."
+          # For Linux, we'll create a simple distribution from the build artifacts
+          mkdir -p dist
+          if [ -d "build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3" ]; then
+            cp -R build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3 dist/
+          fi
+          if [ -f "build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync" ]; then
+            cp build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync dist/
+          fi
 
-          # Create build directory and build with CMake
-          RUN mkdir -p build && \
-              cd build && \
-              cmake .. -DCMAKE_BUILD_TYPE=Release \
-                -DJUCE_BUILD_EXTRAS=OFF \
-                -DJUCE_BUILD_EXAMPLES=OFF \
-                -DJUCE_ENABLE_MODULE_SOURCE_GROUPS=ON && \
-              make -j$(nproc)
-
-          # Keep container running to copy artifacts
-          CMD ["tail", "-f", "/dev/null"]
-          EOF
-
-          # Build and run the Docker container
-          docker build -t pulse24sync-build .
-          docker run -d --name build-container pulse24sync-build tail -f /dev/null
-
-          # Copy build artifacts from container
-          docker cp build-container:/workspace/build ./linux-builds
-
-          # Clean up
-          docker stop build-container
-          docker rm build-container
+      - name: Verify distribution
+        run: |
+          echo "Checking distribution artifacts:"
+          ls -la dist/
+          echo ""
+          echo "Distribution size:"
+          du -sh dist/*
 
       - name: Upload Linux build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-builds
-          path: linux-builds/
+          path: dist/
 
   build-macos:
     runs-on: macOS
@@ -165,11 +163,35 @@ jobs:
 
           echo "Build completed successfully"
 
+      - name: Create clean distribution
+        run: |
+          echo "Creating clean distribution for macOS..."
+          cd Builds/MacOSX/build/Release
+          chmod +x $GITHUB_WORKSPACE/create-macos-distribution.sh
+          $GITHUB_WORKSPACE/create-macos-distribution.sh
+
+      - name: Verify distribution
+        run: |
+          echo "Checking distribution artifacts:"
+          ls -la Builds/MacOSX/build/Release/dist/
+          echo ""
+          echo "Distribution size:"
+          du -sh Builds/MacOSX/build/Release/dist/*
+
+      - name: Cleanup macOS build artifacts
+        if: always()
+        run: |
+          # Clean up temporary files
+          find . -name "*.tmp" -o -name "*.temp" -o -name "*~" -type f -delete 2>/dev/null || true
+          find . -name ".DS_Store" -type f -delete 2>/dev/null || true
+          find . -name "*.build" -type d -exec rm -rf {} + 2>/dev/null || true
+          find . -name "DerivedData" -type d -exec rm -rf {} + 2>/dev/null || true
+
       - name: Upload macOS build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-builds
-          path: Builds/MacOSX/build/Release/
+          path: Builds/MacOSX/build/Release/dist/
 
   build-windows:
     runs-on: Windows
@@ -273,10 +295,62 @@ jobs:
 
           echo Build completed successfully
 
+      - name: Create clean distribution
+        shell: cmd
+        run: |
+          echo Creating clean distribution for Windows...
+          cd Builds\VisualStudio2022\x64\Release
+
+          REM Check if we have the build files
+          if not exist "VST3\Pulse24Sync.vst3" (
+              echo ERROR: VST3 plugin not found at VST3\Pulse24Sync.vst3
+              exit /b 1
+          )
+
+          echo 📦 Creating clean distribution from existing build...
+
+          REM Create distribution directory
+          if exist "dist" rd /s /q "dist" >nul 2>&1
+          mkdir "dist"
+
+          REM Copy VST3 plugin
+          echo   - Copying VST3 plugin...
+          xcopy "VST3\Pulse24Sync.vst3" "dist\Pulse24Sync.vst3\" /E /I /Y >nul
+
+          REM Copy standalone application
+          if exist "Standalone Plugin\Pulse24Sync.exe" (
+              echo   - Copying standalone application...
+              copy "Standalone Plugin\Pulse24Sync.exe" "dist\Pulse24Sync.exe" >nul
+          )
+
+          echo 📊 Distribution created in 'dist' folder:
+          if exist "dist" (
+              for /f "tokens=*" %%i in ('dir /s "dist" ^| find "File(s)"') do echo   %%i
+              for /f "tokens=*" %%i in ('dir /s "dist" ^| find "Dir(s)"') do echo   %%i
+          )
+
+      - name: Verify distribution
+        shell: cmd
+        run: |
+          echo Checking distribution artifacts:
+          dir Builds\VisualStudio2022\x64\Release\dist
+          echo.
+          echo Distribution size:
+          dir Builds\VisualStudio2022\x64\Release\dist /s
+
+      - name: Cleanup Windows build artifacts
+        if: always()
+        shell: powershell
+        run: |
+          # Clean up temporary files
+          Get-ChildItem -Path . -Recurse -Include @("*.tmp", "*.temp", "*~", "Thumbs.db", "ehthumbs.db") -Force | Remove-Item -Force -ErrorAction SilentlyContinue
+
+          # Clean up Visual Studio temporary files
+          Get-ChildItem -Path . -Recurse -Name "*.build" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
+          Get-ChildItem -Path . -Recurse -Name ".vs" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
+
       - name: Upload Windows build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-builds
-          path: |
-            Builds/VisualStudio2022/x64/Release/
-            Builds/VisualStudio2022/build/Release/
+          path: Builds/VisualStudio2022/x64/Release/dist/

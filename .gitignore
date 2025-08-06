@@ -78,3 +78,4 @@ Thumbs.db
 
 # JUCE Builds directory (generated files)
 Builds/
+dist/

@@ -1,3 +1,5 @@
+[![Build Pulse24Sync](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/build.yml/badge.svg)](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/build.yml)
+
 # Enhanced MIDI Sync VST Plugin
 
 A professional VST3 plugin that provides comprehensive MIDI synchronization with configurable resolution, MIDI Machine Control (MMC), Song Position Pointer, and advanced transport features.
@@ -113,32 +115,74 @@ A professional VST3 plugin that provides comprehensive MIDI synchronization with
 
 ### Linux
 
-1. **Navigate to the project directory**:
+1. **Install dependencies** (Ubuntu/Debian):
    ```bash
-   cd /path/to/Pulse24Sync
+   ./install-linux-deps.sh
    ```
 
-2. **Create build directory**:
+2. **Build the plugin**:
    ```bash
-   mkdir build
-   cd build
+   ./build.sh
    ```
 
-3. **Configure with CMake**:
-   ```bash
-   cmake ..
-   ```
-
-4. **Build the plugin**:
-   ```bash
-   make -j$(nproc)
-   ```
+For detailed Linux build instructions and other distributions, see [LINUX_BUILD_GUIDE.md](LINUX_BUILD_GUIDE.md).
 
 ## Installation
 
 After building, the VST3 plugin will be automatically copied to the appropriate system location:
 
 - **macOS**: `~/Library/Audio/Plug-Ins/VST3/Pulse24Sync.vst3`
+- **Windows**: `C:\Program Files\Common Files\VST3\Pulse24Sync.vst3`
+- **Linux**: `~/.vst3/Pulse24Sync.vst3`
+
+## Creating Releases
+
+### Automatic Release Creation
+
+This project includes an automated release system that builds both macOS and Windows versions and creates a GitHub release with all plugin formats.
+
+#### To create a release:
+
+1. **Make sure all changes are committed**:
+   ```bash
+   git add .
+   git commit -m "Your commit message"
+   git push origin main
+   ```
+
+2. **Run the release script**:
+   ```bash
+   ./create-release.sh
+   ```
+
+3. **Follow the prompts** to enter the version number (e.g., `1.0.0`, `1.2.3-beta.1`)
+
+4. **The script will**:
+   - Create a git tag (e.g., `v1.0.0`)
+   - Push the tag to GitHub
+   - Trigger the automated build and release workflow
+
+#### What gets built automatically:
+
+- **macOS**: VST3, Audio Unit (.component), and Standalone (.app)
+- **Windows**: VST3 and Standalone (.exe)
+
+#### Release workflow:
+
+1. GitHub Actions builds both platforms in parallel
+2. All plugin formats are packaged
+3. A GitHub release is created with:
+   - Release notes
+   - Download links for all platforms
+   - Proper versioning and tagging
+
+#### Manual release creation:
+
+If you prefer to create releases manually:
+1. Go to [GitHub Releases](https://github.com/your-repo/releases)
+2. Click "Create a new release"
+3. Set the tag version (e.g., `v1.0.0`)
+4. Upload the built plugin files manually
 
 ## Usage
 

@@ -1,9 +1,34 @@
+@ -1,82 +0,0 @@
 #!/bin/bash
 
 # Pulse24Sync VST Plugin Build Script
 # This script builds the VST plugin using CMake
 
 set -e  # Exit on any error
+
+# Cleanup function to ensure temporary files are cleaned up
+cleanup() {
+    local exit_code=$?
+    echo "🧹 Performing cleanup..."
+
+    # Clean up CMake cache and temporary files if build failed
+    if [ $exit_code -ne 0 ] && [ -d "build" ]; then
+        echo "  - Cleaning up failed build artifacts..."
+        rm -rf build/CMakeCache.txt build/CMakeFiles/ build/*.cmake 2>/dev/null || true
+    fi
+
+    # Clean up any temporary files that might have been created
+    find . -name "*.tmp" -o -name "*.temp" -o -name "*~" -type f -delete 2>/dev/null || true
+
+    if [ $exit_code -ne 0 ]; then
+        echo "❌ Build failed - temporary files cleaned up"
+    fi
+
+    exit $exit_code
+}
+
+# Set trap to ensure cleanup runs on script exit
+trap cleanup EXIT INT TERM
 
 echo "🎵 Building Pulse24Sync VST Plugin..."
 echo "======================================"
@@ -54,3 +79,5 @@ else
 fi
 echo ""
 echo "🎉 You can now load Pulse24Sync in your DAW!"
+
+# Note: cleanup() will be called automatically, but successful builds keep artifacts

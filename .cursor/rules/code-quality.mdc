@@ -1,0 +1,43 @@
+# Code Quality Standards
+
+## JUCE Plugin Development
+- Follow JUCE coding conventions and patterns
+- Use RAII and smart pointers where appropriate
+- Implement proper parameter management with `juce::AudioProcessorValueTreeState`
+- Handle MIDI events efficiently with proper timing
+
+## C++ Standards
+- Use C++17 features appropriately
+- Prefer `const` correctness
+- Use `override` keyword for virtual functions
+- Implement proper destructors and move semantics
+- Avoid raw pointers in favor of smart pointers
+
+## Audio Plugin Best Practices
+- Implement proper parameter smoothing
+- Handle sample rate changes correctly
+- Use efficient audio processing algorithms
+- Implement proper MIDI timing and synchronization
+- Follow VST3/AU plugin guidelines
+
+## Error Handling
+- Use RAII for resource management
+- Implement proper error checking in audio processing
+- Handle edge cases in parameter validation
+- Provide meaningful error messages
+
+## Performance
+- Minimize allocations in audio processing threads
+- Use lock-free data structures where possible
+- Optimize for real-time audio processing
+- Profile and optimize hot paths
+
+## Documentation
+- Document public APIs and complex algorithms
+- Use clear, descriptive variable and function names
+- Add comments for non-obvious audio processing logic
+- Keep documentation up to date with code changes
+description:
+globs:
+alwaysApply: false
+---
