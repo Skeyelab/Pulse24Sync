@@ -368,9 +368,9 @@ jobs:
             echo "Distribution directory contents:"
             ls -la Builds/MacOSX/build/Release/dist/ 2>/dev/null || echo "Directory not found"
             exit 1
-          else
+          else {
             echo "✅ Build artifacts validation passed"
-          fi
+          }
 
       - name: Validate build artifacts (Windows)
         if: matrix.os == 'Windows'
@@ -407,7 +407,7 @@ jobs:
             }
             exit 1
           } else {
-            Write-Host "✅ Build artifacts validation passed"
+            Write-Host "Build artifacts validation passed"
           }
 
       - name: Validate build artifacts (Linux)
@@ -441,9 +441,9 @@ jobs:
               echo "Directory not found"
             fi
             exit 1
-          else
+          } else {
             echo "✅ Build artifacts validation passed"
-          fi
+          }
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
