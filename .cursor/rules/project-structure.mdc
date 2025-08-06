@@ -1,0 +1,43 @@
+# Project Structure & Organization
+
+## Core Files
+- [Pulse24Sync.jucer](mdc:Pulse24Sync.jucer) - Main JUCE project file
+- [CMakeLists.txt](mdc:CMakeLists.txt) - CMake build configuration
+- [README.md](mdc:README.md) - Project documentation
+
+## Source Code
+All source files go in the [Source/](mdc:Source/) directory:
+- [PluginProcessor.cpp](mdc:Source/PluginProcessor.cpp) - Main plugin logic
+- [PluginProcessor.h](mdc:Source/PluginProcessor.h) - Plugin processor header
+- [PluginEditor.cpp](mdc:Source/PluginEditor.cpp) - UI implementation
+- [PluginEditor.h](mdc:Source/PluginEditor.h) - UI header
+- [PulseGenerator.cpp](mdc:Source/PulseGenerator.cpp) - Pulse generation logic
+- [PulseGenerator.h](mdc:Source/PulseGenerator.h) - Pulse generator header
+
+## Build Outputs
+- `Builds/` - Generated build files (gitignored)
+- `JuceLibraryCode/` - JUCE-generated code (gitignored)
+
+## Documentation
+- [BUILD_ISSUES.md](mdc:BUILD_ISSUES.md) - Build troubleshooting
+- [BUILD_SERVICES.md](mdc:BUILD_SERVICES.md) - Build service documentation
+- [WINDOWS_BUILD_GUIDE.md](mdc:WINDOWS_BUILD_GUIDE.md) - Windows-specific build instructions
+
+## Scripts
+- [build.sh](mdc:build.sh) - Main build script
+- [build_macos.sh](mdc:build_macos.sh) - macOS-specific build
+- [build_windows.bat](mdc:build_windows.bat) - Windows build script
+- [cleanup-build.sh](mdc:cleanup-build.sh) - Build cleanup
+
+## CI/CD
+- [.github/workflows/release.yml](mdc:.github/workflows/release.yml) - Release automation
+
+## Keep It Clean
+- No build artifacts in version control
+- No temporary files or IDE-specific files
+- Organized documentation in root directory
+- Clear separation between source, build, and documentation
+description:
+globs:
+alwaysApply: false
+---
