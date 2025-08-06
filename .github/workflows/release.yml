@@ -25,8 +25,151 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Try to download pre-built artifacts from recent successful builds
+      - name: Check for existing build artifacts
+        id: check_artifacts
+        continue-on-error: true
+        run: |
+          echo "current_hash=${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}" >> $GITHUB_OUTPUT
+          echo "Checking for cached artifacts for commit: ${{ github.sha }}"
+          echo "Source hash: ${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}"
+
+      - name: Download cached build artifacts
+        id: download_artifacts
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Look for artifacts from recent workflow runs that match our commit
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'build.yml',
+              status: 'completed',
+              conclusion: 'success',
+              per_page: 50
+            });
+
+            console.log(`Found ${runs.data.workflow_runs.length} successful build runs`);
+            
+            for (const run of runs.data.workflow_runs) {
+              if (run.head_sha === '${{ github.sha }}') {
+                console.log(`Found matching run for SHA: ${run.head_sha}, run_id: ${run.id}`);
+                
+                // Get artifacts for this run
+                const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  run_id: run.id
+                });
+                
+                console.log(`Found ${artifacts.data.artifacts.length} artifacts for run ${run.id}`);
+                
+                // Look for build artifacts matching our OS
+                const osArtifactName = '${{ matrix.os }}' === 'macOS' ? 'macos-builds' : 'windows-builds';
+                const buildArtifact = artifacts.data.artifacts.find(a => a.name === osArtifactName);
+                const metadataArtifactName = `build-metadata-${{ matrix.os }}-${{ github.sha }}`;
+                const metadataArtifact = artifacts.data.artifacts.find(a => a.name === metadataArtifactName);
+                
+                if (buildArtifact && metadataArtifact) {
+                  console.log(`Found cached build artifacts: ${buildArtifact.name}`);
+                  core.setOutput('found_artifacts', 'true');
+                  core.setOutput('build_artifact_id', buildArtifact.id);
+                  core.setOutput('metadata_artifact_id', metadataArtifact.id);
+                  core.setOutput('run_id', run.id);
+                  return;
+                }
+              }
+            }
+            
+            console.log('No matching cached artifacts found');
+            core.setOutput('found_artifacts', 'false');
+
+      - name: Download pre-built artifacts
+        if: steps.download_artifacts.outputs.found_artifacts == 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.os == 'macOS' && 'macos-builds' || 'windows-builds' }}
+          path: cached-builds/
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.download_artifacts.outputs.run_id }}
+
+      - name: Download build metadata
+        if: steps.download_artifacts.outputs.found_artifacts == 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: build-metadata-${{ matrix.os }}-${{ github.sha }}
+          path: build-metadata/
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.download_artifacts.outputs.run_id }}
+
+      - name: Verify cached artifacts
+        id: verify_cache
+        if: steps.download_artifacts.outputs.found_artifacts == 'true'
+        run: |
+          if [ -f "build-metadata/source-hash" ]; then
+            cached_hash=$(cat build-metadata/source-hash)
+            current_hash="${{ steps.check_artifacts.outputs.current_hash }}"
+            echo "Cached hash: $cached_hash"
+            echo "Current hash: $current_hash"
+            
+            if [ "$cached_hash" = "$current_hash" ]; then
+              echo "✅ Cached artifacts are valid for current source code"
+              echo "cache_valid=true" >> $GITHUB_OUTPUT
+              
+              # Copy cached builds to expected location
+              if [ "${{ matrix.os }}" = "macOS" ]; then
+                mkdir -p Builds/MacOSX/build/Release/
+                cp -r cached-builds/* Builds/MacOSX/build/Release/
+              else
+                mkdir -p Builds/VisualStudio2022/x64/Release/
+                mkdir -p Builds/VisualStudio2022/build/Release/
+                cp -r cached-builds/* Builds/VisualStudio2022/x64/Release/ 2>/dev/null || true
+                cp -r cached-builds/* Builds/VisualStudio2022/build/Release/ 2>/dev/null || true
+              fi
+              
+              echo "📦 Using cached build artifacts from run ${{ steps.download_artifacts.outputs.run_id }}"
+            else
+              echo "❌ Cached artifacts are outdated (source code changed)"
+              echo "cache_valid=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "❌ Could not verify cached artifacts"
+            echo "cache_valid=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Cache JUCE modules
+        if: steps.verify_cache.outputs.cache_valid != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/JUCE
+            /Applications/JUCE 2/modules
+            Builds\VisualStudio2022\build
+            $env:LOCALAPPDATA\Microsoft\VisualStudio\*\MSBuild\Current\Bin\Roslyn
+            $env:TEMP\juce-cache
+          key: ${{ runner.os }}-juce-modules-${{ hashFiles('Pulse24Sync.jucer') }}
+          restore-keys: |
+            ${{ runner.os }}-juce-modules-
+
+      - name: Cache build artifacts
+        if: steps.verify_cache.outputs.cache_valid != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData
+            Builds/MacOSX/build
+            Builds\VisualStudio2022\x64\Release
+            Builds\VisualStudio2022\Release
+            $env:TEMP\vs-cache
+          key: ${{ runner.os }}-build-cache-${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}
+          restore-keys: |
+            ${{ runner.os }}-build-cache-
+
       - name: Setup JUCE and Projucer (macOS)
-        if: matrix.os == 'macOS'
+        if: matrix.os == 'macOS' && steps.verify_cache.outputs.cache_valid != 'true'
         run: |
           # Use pre-installed JUCE at /Applications/JUCE 2
           JUCE_PATH="/Applications/JUCE 2"
@@ -85,7 +228,7 @@ jobs:
           echo "Project files generated successfully"
 
       - name: Setup JUCE and Projucer (Windows)
-        if: matrix.os == 'Windows'
+        if: matrix.os == 'Windows' && steps.verify_cache.outputs.cache_valid != 'true'
         shell: powershell
         run: |
           # Set execution policy and run our script
@@ -151,7 +294,7 @@ jobs:
           Write-Host "Project files generated successfully"
 
       - name: Build macOS Plugin
-        if: matrix.os == 'macOS'
+        if: matrix.os == 'macOS' && steps.verify_cache.outputs.cache_valid != 'true'
         run: |
           echo "Building Pulse24Sync plugin..."
 
@@ -175,7 +318,7 @@ jobs:
           find . -name "DerivedData" -type d -exec rm -rf {} + 2>/dev/null || true
 
       - name: Build Windows Plugin
-        if: matrix.os == 'Windows'
+        if: matrix.os == 'Windows' && steps.verify_cache.outputs.cache_valid != 'true'
         shell: cmd
         run: |
           echo Building Pulse24Sync plugin...
@@ -203,6 +346,79 @@ jobs:
           # Clean up Visual Studio temporary files
           Get-ChildItem -Path . -Recurse -Name "*.build" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
           Get-ChildItem -Path . -Recurse -Name ".vs" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
+
+      - name: Show build status
+        run: |
+          if [ "${{ steps.verify_cache.outputs.cache_valid }}" = "true" ]; then
+            echo "🚀 Used cached build artifacts - skipped compilation"
+            echo "📊 Build time saved by reusing artifacts from successful PR build"
+            
+            # Show what artifacts were cached
+            if [ "${{ matrix.os }}" = "macOS" ]; then
+              echo "📦 macOS artifacts:"
+              find Builds/MacOSX/build/Release/ -name "*.vst3" -o -name "*.component" -o -name "*.app" 2>/dev/null || echo "  (checking cached artifacts...)"
+            else
+              echo "📦 Windows artifacts:"
+              find Builds/VisualStudio2022/ -name "*.vst3" -o -name "*.exe" 2>/dev/null || echo "  (checking cached artifacts...)"
+            fi
+          else
+            echo "🔨 Built from source - no suitable cached artifacts found"
+          fi
+
+      # Verify that we have valid build artifacts (either cached or freshly built)
+      - name: Validate build artifacts
+        run: |
+          echo "🔍 Validating build artifacts..."
+          artifacts_found=false
+          
+          if [ "${{ matrix.os }}" = "macOS" ]; then
+            # Check for macOS artifacts
+            if [ -d "Builds/MacOSX/build/Release" ]; then
+              echo "✅ macOS build directory exists"
+              
+              # Look for expected plugin formats
+              if find Builds/MacOSX/build/Release -name "*.vst3" | grep -q .; then
+                echo "✅ VST3 plugin found"
+                artifacts_found=true
+              fi
+              if find Builds/MacOSX/build/Release -name "*.component" | grep -q .; then
+                echo "✅ Audio Unit plugin found"
+                artifacts_found=true
+              fi
+              if find Builds/MacOSX/build/Release -name "*.app" | grep -q .; then
+                echo "✅ Standalone app found"
+                artifacts_found=true
+              fi
+            fi
+          else
+            # Check for Windows artifacts
+            if [ -d "Builds/VisualStudio2022" ]; then
+              echo "✅ Windows build directory exists"
+              
+              # Look for expected plugin formats
+              if find Builds/VisualStudio2022 -name "*.vst3" | grep -q .; then
+                echo "✅ VST3 plugin found"
+                artifacts_found=true
+              fi
+              if find Builds/VisualStudio2022 -name "*.exe" | grep -q .; then
+                echo "✅ Standalone executable found"
+                artifacts_found=true
+              fi
+            fi
+          fi
+          
+          if [ "$artifacts_found" = "false" ]; then
+            echo "❌ No valid build artifacts found!"
+            echo "Build directory contents:"
+            if [ "${{ matrix.os }}" = "macOS" ]; then
+              ls -la Builds/MacOSX/build/Release/ 2>/dev/null || echo "Directory not found"
+            else
+              find Builds/VisualStudio2022 -type f 2>/dev/null | head -10 || echo "Directory not found"
+            fi
+            exit 1
+          else
+            echo "✅ Build artifacts validation passed"
+          fi
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -264,25 +480,25 @@ jobs:
       - name: Create release packages
         run: |
           mkdir -p release-packages
-          
+
           # macOS packages
           if [ -d "./artifacts/macos-builds" ]; then
             echo "Creating macOS packages..."
-            
+
             # VST3
             if [ -d "./artifacts/macos-builds/Pulse24Sync.vst3" ]; then
               cd ./artifacts/macos-builds
               zip -r ../../release-packages/Pulse24Sync-macOS-vst3.zip Pulse24Sync.vst3
               cd ../..
             fi
-            
+
             # Audio Unit
             if [ -d "./artifacts/macos-builds/Pulse24Sync.component" ]; then
               cd ./artifacts/macos-builds
               zip -r ../../release-packages/Pulse24Sync-macOS-au.zip Pulse24Sync.component
               cd ../..
             fi
-            
+
             # Standalone
             if [ -d "./artifacts/macos-builds/Pulse24Sync.app" ]; then
               cd ./artifacts/macos-builds
@@ -290,18 +506,18 @@ jobs:
               cd ../..
             fi
           fi
-          
+
           # Windows packages
           if [ -d "./artifacts/windows-builds" ]; then
             echo "Creating Windows packages..."
-            
+
             # VST3
             if [ -d "./artifacts/windows-builds/Pulse24Sync.vst3" ]; then
               cd ./artifacts/windows-builds
               zip -r ../../release-packages/Pulse24Sync-Windows-vst3.zip Pulse24Sync.vst3
               cd ../..
             fi
-            
+
             # Standalone
             if [ -f "./artifacts/windows-builds/Pulse24Sync.exe" ]; then
               cd ./artifacts/windows-builds
@@ -309,7 +525,7 @@ jobs:
               cd ../..
             fi
           fi
-          
+
           echo "Created packages:"
           ls -la release-packages/
 
