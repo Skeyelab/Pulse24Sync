@@ -21,8 +21,8 @@ jobs:
           - os: Windows
             artifact-name: windows-builds
             build-path: |
-              Builds/VisualStudio2022/x64/Release/Pulse24Sync.vst3
-              Builds/VisualStudio2022/x64/Release/Pulse24Sync.exe
+              Builds/VisualStudio2022/x64/Release/VST3/Pulse24Sync.vst3
+              Builds/VisualStudio2022/x64/Release/Standalone Plugin/Pulse24Sync.exe
           - os: ubuntu-24.04
             artifact-name: linux-builds
             build-path: |
@@ -330,11 +330,11 @@ jobs:
           set artifacts_found=false
           if exist "Builds\VisualStudio2022\x64\Release" (
             echo Windows build directory exists
-            if exist "Builds\VisualStudio2022\x64\Release\Pulse24Sync.vst3" (
+            if exist "Builds\VisualStudio2022\x64\Release\VST3\Pulse24Sync.vst3" (
               echo VST3 plugin found
               set artifacts_found=true
             )
-            if exist "Builds\VisualStudio2022\x64\Release\Pulse24Sync.exe" (
+            if exist "Builds\VisualStudio2022\x64\Release\Standalone Plugin\Pulse24Sync.exe" (
               echo Standalone executable found
               set artifacts_found=true
             )
