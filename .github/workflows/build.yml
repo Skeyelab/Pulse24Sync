@@ -43,8 +43,6 @@ jobs:
             libxcomposite-dev \
             libgtk-3-dev
 
-
-
       - name: Verify dependencies
         run: |
           echo "Verifying required packages are available:"
@@ -60,31 +58,33 @@ jobs:
         run: |
           echo "Building Pulse24Sync VST Plugin for Linux..."
           chmod +x build.sh
-          
-
-          
           ./build.sh
 
-
-
-      - name: Verify build outputs
+      - name: Create clean distribution
         run: |
-          echo "Checking build artifacts:"
-          ls -la build/Pulse24Sync_artefacts/Release/
+          echo "Creating clean distribution for Linux..."
+          # For Linux, we'll create a simple distribution from the build artifacts
+          mkdir -p dist
+          if [ -d "build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3" ]; then
+            cp -R build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3 dist/
+          fi
+          if [ -f "build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync" ]; then
+            cp build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync dist/
+          fi
+
+      - name: Verify distribution
+        run: |
+          echo "Checking distribution artifacts:"
+          ls -la dist/
           echo ""
-          echo "VST3 Plugin:"
-          ls -la build/Pulse24Sync_artefacts/Release/VST3/
-          echo ""
-          echo "Standalone Application:"
-          ls -la build/Pulse24Sync_artefacts/Release/Standalone/
+          echo "Distribution size:"
+          du -sh dist/*
 
       - name: Upload Linux build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-builds
-          path: |
-            build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3/
-            build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync
+          path: dist/
 
   build-macos:
     runs-on: macOS
@@ -171,6 +171,20 @@ jobs:
 
           echo "Build completed successfully"
 
+      - name: Create clean distribution
+        run: |
+          echo "Creating clean distribution for macOS..."
+          chmod +x create-macos-distribution.sh
+          ./create-macos-distribution.sh
+
+      - name: Verify distribution
+        run: |
+          echo "Checking distribution artifacts:"
+          ls -la dist/
+          echo ""
+          echo "Distribution size:"
+          du -sh dist/*
+
       - name: Cleanup macOS build artifacts
         if: always()
         run: |
@@ -184,7 +198,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-builds
-          path: Builds/MacOSX/build/Release/
+          path: dist/
 
   build-windows:
     runs-on: Windows
@@ -288,13 +302,28 @@ jobs:
 
           echo Build completed successfully
 
+      - name: Create clean distribution
+        shell: cmd
+        run: |
+          echo Creating clean distribution for Windows...
+          create-windows-distribution.bat
+
+      - name: Verify distribution
+        shell: cmd
+        run: |
+          echo Checking distribution artifacts:
+          dir dist
+          echo.
+          echo Distribution size:
+          dir dist /s
+
       - name: Cleanup Windows build artifacts
         if: always()
         shell: powershell
         run: |
           # Clean up temporary files
           Get-ChildItem -Path . -Recurse -Include @("*.tmp", "*.temp", "*~", "Thumbs.db", "ehthumbs.db") -Force | Remove-Item -Force -ErrorAction SilentlyContinue
-          
+
           # Clean up Visual Studio temporary files
           Get-ChildItem -Path . -Recurse -Name "*.build" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
           Get-ChildItem -Path . -Recurse -Name ".vs" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
@@ -303,6 +332,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-builds
-          path: |
-            Builds/VisualStudio2022/x64/Release/
-            Builds/VisualStudio2022/build/Release/
+          path: dist/
