@@ -1,10 +1,18 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "AbletonLinkWrapper.h"
 
 class PulseGenerator
 {
 public:
+    enum SyncMode
+    {
+        SyncToHost = 0,
+        SyncToManual,
+        SyncToLink
+    };
+
     PulseGenerator();
     ~PulseGenerator() = default;
 
@@ -17,7 +25,7 @@ public:
     void setEnabled(bool enabled) { isEnabled = enabled; }
     void setPulseVelocity(float velocity) { pulseVelocity = static_cast<juce::uint8>(velocity); }
     void setPulseChannel(int channel) { pulseChannel = channel; }
-    void setSyncToHost(bool sync) { syncToHost = sync; }
+    void setSyncMode(SyncMode mode) { syncMode = mode; }
     void setManualBPM(float bpm) { manualBPM = bpm; }
 
     // Host tempo synchronization
@@ -25,13 +33,18 @@ public:
     void setHostIsPlaying(bool playing) { hostIsPlaying = playing; }
     void setHostPosition(double timeInSeconds) { hostPosition = timeInSeconds; }
 
+    // Link control (only available in standalone builds)
+    void setLinkEnabled(bool enabled);
+    bool isLinkEnabled() const;
+    std::size_t getLinkPeerCount() const;
+
     // Getters for UI
     bool getEnabled() const { return isEnabled; }
     float getPulseVelocity() const { return static_cast<float>(pulseVelocity); }
     int getPulseChannel() const { return pulseChannel; }
-    bool getSyncToHost() const { return syncToHost; }
+    SyncMode getSyncMode() const { return syncMode; }
     float getManualBPM() const { return manualBPM; }
-    double getCurrentBPM() const { return syncToHost ? hostBPM : manualBPM; }
+    double getCurrentBPM() const;
     double getPulseRate() const { return pulseRate; }
 
 private:
@@ -39,7 +52,7 @@ private:
     bool isEnabled = true;
     juce::uint8 pulseVelocity = 100;
     int pulseChannel = 1;
-    bool syncToHost = true;
+    SyncMode syncMode = SyncToHost;
     float manualBPM = 120.0f;
 
     // Host tempo info
@@ -54,6 +67,9 @@ private:
     double currentPosition = 0.0;  // current position in samples
     double nextPulseTime = 0.0;  // time of next pulse in samples
 
+    // Link integration
+    AbletonLinkWrapper linkWrapper;
+
     // Constants
     static constexpr int PULSES_PER_QUARTER_NOTE = 24;
     static constexpr double SECONDS_PER_MINUTE = 60.0;
@@ -61,4 +77,5 @@ private:
     // Helper methods
     void updatePulseRate();
     void generatePulse(juce::MidiBuffer& midiMessages, int samplePosition);
+    bool shouldGeneratePulse() const;
 };

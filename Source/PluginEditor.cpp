@@ -4,7 +4,11 @@
 Pulse24SyncAudioProcessorEditor::Pulse24SyncAudioProcessorEditor(Pulse24SyncAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
-    setSize(400, 500);
+#ifdef ABLETON_LINK_ENABLED
+    setSize(400, 600); // Increased height for Link controls
+#else
+    setSize(400, 550); // Slightly increased for sync mode combo box
+#endif
     setupUI();
 
     // Start timer for status updates
@@ -54,14 +58,27 @@ void Pulse24SyncAudioProcessorEditor::resized()
     channelSlider.setBounds(bounds.removeFromTop(40));
     bounds.removeFromTop(10);
 
-    // Sync to host button
-    syncToHostButton.setBounds(bounds.removeFromTop(30));
+    // Sync mode combo box
+    syncModeLabel.setBounds(bounds.removeFromTop(20));
+    syncModeComboBox.setBounds(bounds.removeFromTop(30));
     bounds.removeFromTop(10);
 
     // Manual BPM slider
     manualBPMLabel.setBounds(bounds.removeFromTop(20));
     manualBPMSlider.setBounds(bounds.removeFromTop(40));
     bounds.removeFromTop(10);
+
+#ifdef ABLETON_LINK_ENABLED
+    // Link enabled button
+    linkEnabledButton.setBounds(bounds.removeFromTop(30));
+    bounds.removeFromTop(10);
+
+    // Link peer count
+    auto peerCountBounds = bounds.removeFromTop(25);
+    linkPeerCountDescLabel.setBounds(peerCountBounds.removeFromLeft(80));
+    linkPeerCountLabel.setBounds(peerCountBounds);
+    bounds.removeFromTop(10);
+#endif
 }
 
 void Pulse24SyncAudioProcessorEditor::setupUI()
@@ -112,11 +129,19 @@ void Pulse24SyncAudioProcessorEditor::setupUI()
     channelAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.parameters, "pulseChannel", channelSlider);
 
-    // Sync to host button
-    addAndMakeVisible(syncToHostButton);
-    syncToHostButton.setButtonText("Sync to Host Tempo");
-    syncToHostAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        audioProcessor.parameters, "syncToHost", syncToHostButton);
+    // Sync mode combo box
+    addAndMakeVisible(syncModeLabel);
+    syncModeLabel.setText("Sync Mode", juce::dontSendNotification);
+    syncModeLabel.setFont(juce::Font(12.0f));
+    syncModeLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    syncModeLabel.setJustificationType(juce::Justification::centred);
+
+    addAndMakeVisible(syncModeComboBox);
+    syncModeComboBox.addItem("Host", 1);
+    syncModeComboBox.addItem("Manual", 2);
+    syncModeComboBox.addItem("Link", 3);
+    syncModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        audioProcessor.parameters, "syncMode", syncModeComboBox);
 
     // Manual BPM slider
     addAndMakeVisible(manualBPMLabel);
@@ -130,6 +155,27 @@ void Pulse24SyncAudioProcessorEditor::setupUI()
     manualBPMSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
     manualBPMAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.parameters, "manualBPM", manualBPMSlider);
+
+#ifdef ABLETON_LINK_ENABLED
+    // Link enabled button
+    addAndMakeVisible(linkEnabledButton);
+    linkEnabledButton.setButtonText("Link Enabled");
+    linkEnabledAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+        audioProcessor.parameters, "linkEnabled", linkEnabledButton);
+
+    // Link peer count labels
+    addAndMakeVisible(linkPeerCountDescLabel);
+    linkPeerCountDescLabel.setText("Link Peers:", juce::dontSendNotification);
+    linkPeerCountDescLabel.setFont(juce::Font(12.0f));
+    linkPeerCountDescLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    linkPeerCountDescLabel.setJustificationType(juce::Justification::centredLeft);
+
+    addAndMakeVisible(linkPeerCountLabel);
+    linkPeerCountLabel.setText("0", juce::dontSendNotification);
+    linkPeerCountLabel.setFont(juce::Font(12.0f));
+    linkPeerCountLabel.setColour(juce::Label::textColourId, juce::Colours::lightblue);
+    linkPeerCountLabel.setJustificationType(juce::Justification::centredLeft);
+#endif
 }
 
 void Pulse24SyncAudioProcessorEditor::timerCallback()
@@ -148,15 +194,40 @@ void Pulse24SyncAudioProcessorEditor::updateStatus()
         statusText += "Disabled";
         statusLabel.setColour(juce::Label::textColourId, juce::Colours::grey);
     }
-    else if (!pulseGen.getSyncToHost())
-    {
-        statusText += "Manual Mode - " + juce::String(pulseGen.getManualBPM(), 1) + " BPM";
-        statusLabel.setColour(juce::Label::textColourId, juce::Colours::orange);
-    }
     else
     {
-        statusText += "Host Sync - " + juce::String(pulseGen.getCurrentBPM(), 1) + " BPM";
-        statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
+        auto syncMode = pulseGen.getSyncMode();
+        switch (syncMode)
+        {
+            case PulseGenerator::SyncToHost:
+                statusText += "Host Sync - " + juce::String(pulseGen.getCurrentBPM(), 1) + " BPM";
+                statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
+                break;
+            case PulseGenerator::SyncToManual:
+                statusText += "Manual Mode - " + juce::String(pulseGen.getCurrentBPM(), 1) + " BPM";
+                statusLabel.setColour(juce::Label::textColourId, juce::Colours::orange);
+                break;
+            case PulseGenerator::SyncToLink:
+#ifdef ABLETON_LINK_ENABLED
+                if (pulseGen.isLinkEnabled())
+                {
+                    statusText += "Link Sync - " + juce::String(pulseGen.getCurrentBPM(), 1) + " BPM";
+                    statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightblue);
+                }
+                else
+                {
+                    statusText += "Link Mode (Disabled) - " + juce::String(pulseGen.getCurrentBPM(), 1) + " BPM";
+                    statusLabel.setColour(juce::Label::textColourId, juce::Colours::grey);
+                }
+                
+                // Update peer count
+                linkPeerCountLabel.setText(juce::String(pulseGen.getLinkPeerCount()), juce::dontSendNotification);
+#else
+                statusText += "Link Not Available";
+                statusLabel.setColour(juce::Label::textColourId, juce::Colours::red);
+#endif
+                break;
+        }
     }
 
     statusText += " | Rate: " + juce::String(pulseGen.getPulseRate(), 1) + " Hz";

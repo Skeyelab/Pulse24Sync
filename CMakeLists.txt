@@ -19,12 +19,19 @@ FetchContent_Declare(
     GIT_TAG 7.0.12
 )
 
+# Download and setup Ableton Link
+FetchContent_Declare(
+    AbletonLink
+    GIT_REPOSITORY https://github.com/Ableton/link.git
+    GIT_TAG Link-3.1.3
+)
+
 # Disable JUCE extras to avoid build issues with macOS 15.0 and Linux
 set(JUCE_BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
 set(JUCE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(JUCE_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
 
-FetchContent_MakeAvailable(JUCE)
+FetchContent_MakeAvailable(JUCE AbletonLink)
 
 # Create the VST plugin
 juce_add_plugin(Pulse24Sync
@@ -52,6 +59,7 @@ target_sources(Pulse24Sync
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
         Source/PulseGenerator.cpp
+        Source/AbletonLinkWrapper.cpp
 )
 
 # Add JUCE modules
@@ -60,7 +68,27 @@ target_compile_definitions(Pulse24Sync
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
+    PRIVATE
+        $<$<BOOL:${JUCE_BUILD_STANDALONE}>:ABLETON_LINK_ENABLED=1>
 )
+
+# Add platform-specific Link defines for standalone builds
+if(UNIX AND NOT APPLE)
+    target_compile_definitions(Pulse24Sync
+        PRIVATE
+            $<$<BOOL:${JUCE_BUILD_STANDALONE}>:LINK_PLATFORM_LINUX=1>
+    )
+elseif(WIN32)
+    target_compile_definitions(Pulse24Sync
+        PRIVATE
+            $<$<BOOL:${JUCE_BUILD_STANDALONE}>:LINK_PLATFORM_WINDOWS=1>
+    )
+elseif(APPLE)
+    target_compile_definitions(Pulse24Sync
+        PRIVATE
+            $<$<BOOL:${JUCE_BUILD_STANDALONE}>:LINK_PLATFORM_MACOSX=1>
+    )
+endif()
 
 # Generate JuceHeader.h
 juce_generate_juce_header(Pulse24Sync)
@@ -84,6 +112,13 @@ target_link_libraries(Pulse24Sync
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
+)
+
+# Add Link include paths for standalone builds
+target_include_directories(Pulse24Sync
+    PRIVATE
+        $<$<BOOL:${JUCE_BUILD_STANDALONE}>:${abletonlink_SOURCE_DIR}/include>
+        $<$<BOOL:${JUCE_BUILD_STANDALONE}>:${abletonlink_SOURCE_DIR}/modules/asio-standalone/asio/include>
 )
 
 # Linux-specific configurations

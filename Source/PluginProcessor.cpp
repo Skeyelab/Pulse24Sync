@@ -10,8 +10,12 @@ Pulse24SyncAudioProcessor::Pulse24SyncAudioProcessor()
             std::make_unique<juce::AudioParameterBool>("enabled", "Enabled", true),
             std::make_unique<juce::AudioParameterFloat>("pulseVelocity", "Pulse Velocity", 0.0f, 127.0f, 100.0f),
             std::make_unique<juce::AudioParameterInt>("pulseChannel", "Pulse Channel", 1, 16, 1),
-            std::make_unique<juce::AudioParameterBool>("syncToHost", "Sync to Host", true),
-            std::make_unique<juce::AudioParameterFloat>("manualBPM", "Manual BPM", 60.0f, 200.0f, 120.0f)
+            std::make_unique<juce::AudioParameterChoice>("syncMode", "Sync Mode", 
+                juce::StringArray("Host", "Manual", "Link"), 0),
+            std::make_unique<juce::AudioParameterFloat>("manualBPM", "Manual BPM", 60.0f, 200.0f, 120.0f),
+#ifdef ABLETON_LINK_ENABLED
+            std::make_unique<juce::AudioParameterBool>("linkEnabled", "Link Enabled", false)
+#endif
         })
 {
 }
@@ -79,11 +83,16 @@ void Pulse24SyncAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     pulseGenerator.prepare(sampleRate);
 
     // Set initial parameters
-    pulseGenerator.setEnabled(*parameters.getRawParameterValue("enabled"));
+    pulseGenerator.setEnabled(static_cast<bool>(*parameters.getRawParameterValue("enabled")));
     pulseGenerator.setPulseVelocity(*parameters.getRawParameterValue("pulseVelocity"));
     pulseGenerator.setPulseChannel(static_cast<int>(*parameters.getRawParameterValue("pulseChannel")));
-    pulseGenerator.setSyncToHost(*parameters.getRawParameterValue("syncToHost"));
+    pulseGenerator.setSyncMode(static_cast<PulseGenerator::SyncMode>(
+        static_cast<int>(*parameters.getRawParameterValue("syncMode"))));
     pulseGenerator.setManualBPM(*parameters.getRawParameterValue("manualBPM"));
+
+#ifdef ABLETON_LINK_ENABLED
+    pulseGenerator.setLinkEnabled(static_cast<bool>(*parameters.getRawParameterValue("linkEnabled")));
+#endif
 }
 
 void Pulse24SyncAudioProcessor::releaseResources()
@@ -93,6 +102,7 @@ void Pulse24SyncAudioProcessor::releaseResources()
 
 bool Pulse24SyncAudioProcessor::isBusesLayoutSupported(const BusesLayout& busesLayout) const
 {
+    juce::ignoreUnused(busesLayout);
     // Support any layout
     return true;
 }
@@ -108,11 +118,16 @@ void Pulse24SyncAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
         buffer.clear(i, 0, buffer.getNumSamples());
 
     // Update pulse generator parameters
-    pulseGenerator.setEnabled(*parameters.getRawParameterValue("enabled"));
+    pulseGenerator.setEnabled(static_cast<bool>(*parameters.getRawParameterValue("enabled")));
     pulseGenerator.setPulseVelocity(*parameters.getRawParameterValue("pulseVelocity"));
     pulseGenerator.setPulseChannel(static_cast<int>(*parameters.getRawParameterValue("pulseChannel")));
-    pulseGenerator.setSyncToHost(*parameters.getRawParameterValue("syncToHost"));
+    pulseGenerator.setSyncMode(static_cast<PulseGenerator::SyncMode>(
+        static_cast<int>(*parameters.getRawParameterValue("syncMode"))));
     pulseGenerator.setManualBPM(*parameters.getRawParameterValue("manualBPM"));
+
+#ifdef ABLETON_LINK_ENABLED
+    pulseGenerator.setLinkEnabled(static_cast<bool>(*parameters.getRawParameterValue("linkEnabled")));
+#endif
 
     // Get host tempo information
     juce::AudioPlayHead* playHead = getPlayHead();

@@ -20,24 +20,38 @@ private:
     juce::ToggleButton enabledButton;
     juce::Slider velocitySlider;
     juce::Slider channelSlider;
-    juce::ToggleButton syncToHostButton;
+    juce::ComboBox syncModeComboBox;
     juce::Slider manualBPMSlider;
+
+#ifdef ABLETON_LINK_ENABLED
+    juce::ToggleButton linkEnabledButton;
+    juce::Label linkPeerCountLabel;
+#endif
 
     // Labels
     juce::Label enabledLabel;
     juce::Label velocityLabel;
     juce::Label channelLabel;
-    juce::Label syncToHostLabel;
+    juce::Label syncModeLabel;
     juce::Label manualBPMLabel;
     juce::Label titleLabel;
     juce::Label statusLabel;
+
+#ifdef ABLETON_LINK_ENABLED
+    juce::Label linkEnabledLabel;
+    juce::Label linkPeerCountDescLabel;
+#endif
 
     // Parameter attachments
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> enabledAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> velocityAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> channelAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> syncToHostAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> syncModeAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> manualBPMAttachment;
+
+#ifdef ABLETON_LINK_ENABLED
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> linkEnabledAttachment;
+#endif
 
     void setupUI();
     void updateStatus();
