@@ -190,6 +190,23 @@ jobs:
         with:
           name: macos-builds
           path: Builds/MacOSX/build/Release/
+          retention-days: 30
+
+      # Store build metadata for release workflow to use
+      - name: Store build metadata
+        run: |
+          mkdir -p build-metadata
+          echo "${{ github.sha }}" > build-metadata/commit-sha
+          echo "${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}" > build-metadata/source-hash
+          echo "${{ github.run_id }}" > build-metadata/run-id
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build-metadata/build-time
+
+      - name: Upload build metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-metadata-${{ runner.os }}-${{ github.sha }}
+          path: build-metadata/
+          retention-days: 30
 
   build-windows:
     runs-on: Windows
@@ -322,3 +339,20 @@ jobs:
           path: |
             Builds/VisualStudio2022/x64/Release/
             Builds/VisualStudio2022/build/Release/
+          retention-days: 30
+
+      # Store build metadata for release workflow to use
+      - name: Store build metadata
+        run: |
+          mkdir -p build-metadata
+          echo "${{ github.sha }}" > build-metadata/commit-sha
+          echo "${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}" > build-metadata/source-hash
+          echo "${{ github.run_id }}" > build-metadata/run-id
+          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build-metadata/build-time
+
+      - name: Upload build metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-metadata-${{ runner.os }}-${{ github.sha }}
+          path: build-metadata/
+          retention-days: 30
