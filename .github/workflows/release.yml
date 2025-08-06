@@ -228,15 +228,81 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload macOS Release Assets
+      - name: List available artifacts
+        run: |
+          echo "=== macOS Artifacts ==="
+          find ./artifacts/macos-builds -type f -name "*.vst3" -o -name "*.component" -o -name "*.app" | head -20
+          echo "=== Windows Artifacts ==="
+          find ./artifacts/windows-builds -type f -name "*.vst3" -o -name "*.exe" | head -20
+          echo "=== All Artifacts Structure ==="
+          find ./artifacts -type f | head -30
+          echo "=== Full Directory Listing ==="
+          ls -la ./artifacts/
+          ls -la ./artifacts/macos-builds/ || echo "macos-builds not found"
+          ls -la ./artifacts/windows-builds/ || echo "windows-builds not found"
+
+      - name: Create release packages
+        run: |
+          mkdir -p release-packages
+          
+          # macOS packages
+          if [ -d "./artifacts/macos-builds" ]; then
+            echo "Creating macOS packages..."
+            
+            # VST3
+            if [ -d "./artifacts/macos-builds/Pulse24Sync.vst3" ]; then
+              cd ./artifacts/macos-builds
+              zip -r ../../release-packages/Pulse24Sync-macOS-vst3.zip Pulse24Sync.vst3
+              cd ../..
+            fi
+            
+            # Audio Unit
+            if [ -d "./artifacts/macos-builds/Pulse24Sync.component" ]; then
+              cd ./artifacts/macos-builds
+              zip -r ../../release-packages/Pulse24Sync-macOS-au.zip Pulse24Sync.component
+              cd ../..
+            fi
+            
+            # Standalone
+            if [ -d "./artifacts/macos-builds/Pulse24Sync.app" ]; then
+              cd ./artifacts/macos-builds
+              zip -r ../../release-packages/Pulse24Sync-macOS-standalone.zip Pulse24Sync.app
+              cd ../..
+            fi
+          fi
+          
+          # Windows packages
+          if [ -d "./artifacts/windows-builds" ]; then
+            echo "Creating Windows packages..."
+            
+            # VST3
+            if [ -d "./artifacts/windows-builds/Pulse24Sync.vst3" ]; then
+              cd ./artifacts/windows-builds
+              zip -r ../../release-packages/Pulse24Sync-Windows-vst3.zip Pulse24Sync.vst3
+              cd ../..
+            fi
+            
+            # Standalone
+            if [ -f "./artifacts/windows-builds/Pulse24Sync.exe" ]; then
+              cd ./artifacts/windows-builds
+              zip ../../release-packages/Pulse24Sync-Windows-standalone.zip Pulse24Sync.exe
+              cd ../..
+            fi
+          fi
+          
+          echo "Created packages:"
+          ls -la release-packages/
+
+      - name: Upload macOS VST3
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/macos-builds/Pulse24Sync.vst3
+          asset_path: ./release-packages/Pulse24Sync-macOS-vst3.zip
           asset_name: Pulse24Sync-macOS-vst3.zip
           asset_content_type: application/zip
+        continue-on-error: true
 
       - name: Upload macOS Audio Unit
         uses: actions/upload-release-asset@v1
@@ -244,9 +310,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/macos-builds/Pulse24Sync.component
+          asset_path: ./release-packages/Pulse24Sync-macOS-au.zip
           asset_name: Pulse24Sync-macOS-au.zip
           asset_content_type: application/zip
+        continue-on-error: true
 
       - name: Upload macOS Standalone
         uses: actions/upload-release-asset@v1
@@ -254,9 +321,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/macos-builds/Pulse24Sync.app
+          asset_path: ./release-packages/Pulse24Sync-macOS-standalone.zip
           asset_name: Pulse24Sync-macOS-standalone.zip
           asset_content_type: application/zip
+        continue-on-error: true
 
       - name: Upload Windows VST3
         uses: actions/upload-release-asset@v1
@@ -264,9 +332,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/windows-builds/Pulse24Sync.vst3
+          asset_path: ./release-packages/Pulse24Sync-Windows-vst3.zip
           asset_name: Pulse24Sync-Windows-vst3.zip
           asset_content_type: application/zip
+        continue-on-error: true
 
       - name: Upload Windows Standalone
         uses: actions/upload-release-asset@v1
@@ -274,6 +343,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/windows-builds/Pulse24Sync.exe
+          asset_path: ./release-packages/Pulse24Sync-Windows-standalone.zip
           asset_name: Pulse24Sync-Windows-standalone.zip
           asset_content_type: application/zip
+        continue-on-error: true
