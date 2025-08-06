@@ -87,6 +87,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache JUCE modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/JUCE
+            /Applications/JUCE 2/modules
+          key: ${{ runner.os }}-juce-modules-${{ hashFiles('Pulse24Sync.jucer') }}
+          restore-keys: |
+            ${{ runner.os }}-juce-modules-
+
+      - name: Cache Xcode build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData
+            Builds/MacOSX/build
+          key: ${{ runner.os }}-xcode-build-${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-build-
+
       - name: Setup JUCE and Projucer
         run: |
           # Use pre-installed JUCE at /Applications/JUCE 2
@@ -177,6 +197,26 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Cache JUCE modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            c:\JUCE\modules
+            $env:LOCALAPPDATA\JUCE
+          key: ${{ runner.os }}-juce-modules-${{ hashFiles('Pulse24Sync.jucer') }}
+          restore-keys: |
+            ${{ runner.os }}-juce-modules-
+
+      - name: Cache Visual Studio build
+        uses: actions/cache@v4
+        with:
+          path: |
+            Builds\VisualStudio2022\build
+            $env:LOCALAPPDATA\Microsoft\VisualStudio\*\MSBuild\Current\Bin\Roslyn
+          key: ${{ runner.os }}-vs-build-${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}
+          restore-keys: |
+            ${{ runner.os }}-vs-build-
 
       - name: Setup JUCE and Projucer
         shell: powershell
