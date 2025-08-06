@@ -252,9 +252,9 @@ jobs:
         run: |
           echo "Building Pulse24Sync VST Plugin for Linux..."
           chmod +x build.sh
-          
 
-          
+
+
           ./build.sh
 
 
@@ -324,29 +324,41 @@ jobs:
 
       - name: Validate build artifacts (Windows)
         if: matrix.os == 'Windows'
-        shell: cmd
+        shell: powershell
         run: |
-          echo Validating build artifacts...
-          if exist "Builds\VisualStudio2022\x64\Release\dist" (
-            echo Windows distribution directory exists
-            if exist "Builds\VisualStudio2022\x64\Release\dist\Pulse24Sync.vst3" (
-              echo VST3 plugin found
-              set artifacts_found=true
-            )
-            if exist "Builds\VisualStudio2022\x64\Release\dist\Pulse24Sync.exe" (
-              echo Standalone executable found
-              set artifacts_found=true
-            )
-            if defined artifacts_found (
-              echo Build artifacts validation passed
-            ) else (
-              echo No valid build artifacts found!
-              exit /b 1
-            )
-          ) else (
-            echo No valid build artifacts found!
-            exit /b 1
-          )
+          Write-Host "🔍 Validating build artifacts..."
+          $artifactsFound = $false
+
+          # Check for Windows artifacts in distribution directory
+          if (Test-Path "Builds\VisualStudio2022\x64\Release\dist") {
+            Write-Host "Windows distribution directory exists"
+
+            # Look for expected plugin formats
+            $vst3Files = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\dist" -Recurse -Include "*.vst3" -ErrorAction SilentlyContinue
+            if ($vst3Files) {
+              Write-Host "VST3 plugin found"
+              $artifactsFound = $true
+            }
+
+            $exeFiles = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\dist" -Recurse -Include "*.exe" -ErrorAction SilentlyContinue
+            if ($exeFiles) {
+              Write-Host "Standalone executable found"
+              $artifactsFound = $true
+            }
+          }
+
+          if (-not $artifactsFound) {
+            Write-Host "No valid build artifacts found!"
+            Write-Host "Distribution directory contents:"
+            if (Test-Path "Builds\VisualStudio2022\x64\Release\dist") {
+              Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\dist" -Recurse -File | Select-Object -First 10 | ForEach-Object { Write-Host "  $($_.Name)" }
+            } else {
+              Write-Host "Directory not found"
+            }
+            exit 1
+          } else {
+            Write-Host "Build artifacts validation passed"
+          }
 
       - name: Validate build artifacts (Linux)
         if: matrix.os == 'ubuntu-24.04'
@@ -446,25 +458,25 @@ jobs:
       - name: Create release packages
         run: |
           mkdir -p release-packages
-          
+
           # macOS packages
           if [ -d "./artifacts/macos-builds" ]; then
             echo "Creating macOS packages..."
-            
+
             # VST3
             if [ -d "./artifacts/macos-builds/Pulse24Sync.vst3" ]; then
               cd ./artifacts/macos-builds
               zip -r ../../release-packages/Pulse24Sync-macOS-vst3.zip Pulse24Sync.vst3
               cd ../..
             fi
-            
+
             # Audio Unit
             if [ -d "./artifacts/macos-builds/Pulse24Sync.component" ]; then
               cd ./artifacts/macos-builds
               zip -r ../../release-packages/Pulse24Sync-macOS-au.zip Pulse24Sync.component
               cd ../..
             fi
-            
+
             # Standalone
             if [ -d "./artifacts/macos-builds/Pulse24Sync.app" ]; then
               cd ./artifacts/macos-builds
@@ -472,18 +484,18 @@ jobs:
               cd ../..
             fi
           fi
-          
+
           # Windows packages
           if [ -d "./artifacts/windows-builds" ]; then
             echo "Creating Windows packages..."
-            
+
             # VST3
             if [ -d "./artifacts/windows-builds/Pulse24Sync.vst3" ]; then
               cd ./artifacts/windows-builds
               zip -r ../../release-packages/Pulse24Sync-Windows-vst3.zip Pulse24Sync.vst3
               cd ../..
             fi
-            
+
             # Standalone
             if [ -f "./artifacts/windows-builds/Pulse24Sync.exe" ]; then
               cd ./artifacts/windows-builds
@@ -491,7 +503,7 @@ jobs:
               cd ../..
             fi
           fi
-          
+
           echo "Created packages:"
           ls -la release-packages/
 
