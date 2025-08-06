@@ -74,32 +74,25 @@ A VST3 plugin that generates precisely 24 MIDI pulses per quarter note, with rea
 
 ### Linux
 
-1. **Navigate to the project directory**:
+1. **Install dependencies** (Ubuntu/Debian):
    ```bash
-   cd /path/to/Pulse24Sync
+   ./install-linux-deps.sh
    ```
 
-2. **Create build directory**:
+2. **Build the plugin**:
    ```bash
-   mkdir build
-   cd build
+   ./build.sh
    ```
 
-3. **Configure with CMake**:
-   ```bash
-   cmake ..
-   ```
-
-4. **Build the plugin**:
-   ```bash
-   make -j$(nproc)
-   ```
+For detailed Linux build instructions and other distributions, see [LINUX_BUILD_GUIDE.md](LINUX_BUILD_GUIDE.md).
 
 ## Installation
 
 After building, the VST3 plugin will be automatically copied to the appropriate system location:
 
 - **macOS**: `~/Library/Audio/Plug-Ins/VST3/Pulse24Sync.vst3`
+- **Windows**: `C:\Program Files\Common Files\VST3\Pulse24Sync.vst3`
+- **Linux**: `~/.vst3/Pulse24Sync.vst3`
 
 ## Creating Releases
 
@@ -149,8 +142,6 @@ If you prefer to create releases manually:
 2. Click "Create a new release"
 3. Set the tag version (e.g., `v1.0.0`)
 4. Upload the built plugin files manually
-- **Windows**: `C:\Program Files\Common Files\VST3\Pulse24Sync.vst3`
-- **Linux**: `~/.vst3/Pulse24Sync.vst3`
 
 ## Usage
 
