@@ -12,9 +12,9 @@ Pulse24SyncAudioProcessor::Pulse24SyncAudioProcessor()
             std::make_unique<juce::AudioParameterInt>("pulseChannel", "Pulse Channel", 1, 16, 1),
             std::make_unique<juce::AudioParameterChoice>("syncMode", "Sync Mode", 
                 juce::StringArray("Host", "Manual", "Link"), 0),
-            std::make_unique<juce::AudioParameterFloat>("manualBPM", "Manual BPM", 60.0f, 200.0f, 120.0f),
-#ifdef ABLETON_LINK_ENABLED
-            std::make_unique<juce::AudioParameterBool>("linkEnabled", "Link Enabled", false)
+            std::make_unique<juce::AudioParameterFloat>("manualBPM", "Manual BPM", 60.0f, 200.0f, 120.0f)
+#if JucePlugin_Build_Standalone
+            , std::make_unique<juce::AudioParameterBool>("linkEnabled", "Link Enabled", false)
 #endif
         })
 {
@@ -90,7 +90,7 @@ void Pulse24SyncAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
         static_cast<int>(*parameters.getRawParameterValue("syncMode"))));
     pulseGenerator.setManualBPM(*parameters.getRawParameterValue("manualBPM"));
 
-#ifdef ABLETON_LINK_ENABLED
+#if JucePlugin_Build_Standalone
     pulseGenerator.setLinkEnabled(static_cast<bool>(*parameters.getRawParameterValue("linkEnabled")));
 #endif
 }
@@ -125,7 +125,7 @@ void Pulse24SyncAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
         static_cast<int>(*parameters.getRawParameterValue("syncMode"))));
     pulseGenerator.setManualBPM(*parameters.getRawParameterValue("manualBPM"));
 
-#ifdef ABLETON_LINK_ENABLED
+#if JucePlugin_Build_Standalone
     pulseGenerator.setLinkEnabled(static_cast<bool>(*parameters.getRawParameterValue("linkEnabled")));
 #endif
 

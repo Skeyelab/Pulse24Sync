@@ -51,10 +51,6 @@
     <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
   </MODULES>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"/>
-  <CONFIGURATIONS>
-    <CONFIGURATION name="Debug" enabled="1" defines="ABLETON_LINK_ENABLED=JucePlugin_Build_Standalone"/>
-    <CONFIGURATION name="Release" enabled="1" defines="ABLETON_LINK_ENABLED=JucePlugin_Build_Standalone"/>
-  </CONFIGURATIONS>
   <EXPORTFORMATS>
     <XCODE_MAC targetFolder="Builds/MacOSX">
       <CONFIGURATIONS>

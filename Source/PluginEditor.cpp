@@ -4,7 +4,7 @@
 Pulse24SyncAudioProcessorEditor::Pulse24SyncAudioProcessorEditor(Pulse24SyncAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
-#ifdef ABLETON_LINK_ENABLED
+#if JucePlugin_Build_Standalone
     setSize(400, 600); // Increased height for Link controls
 #else
     setSize(400, 550); // Slightly increased for sync mode combo box
@@ -68,7 +68,7 @@ void Pulse24SyncAudioProcessorEditor::resized()
     manualBPMSlider.setBounds(bounds.removeFromTop(40));
     bounds.removeFromTop(10);
 
-#ifdef ABLETON_LINK_ENABLED
+#if JucePlugin_Build_Standalone
     // Link enabled button
     linkEnabledButton.setBounds(bounds.removeFromTop(30));
     bounds.removeFromTop(10);
@@ -156,7 +156,7 @@ void Pulse24SyncAudioProcessorEditor::setupUI()
     manualBPMAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.parameters, "manualBPM", manualBPMSlider);
 
-#ifdef ABLETON_LINK_ENABLED
+#if JucePlugin_Build_Standalone
     // Link enabled button
     addAndMakeVisible(linkEnabledButton);
     linkEnabledButton.setButtonText("Link Enabled");
@@ -208,7 +208,7 @@ void Pulse24SyncAudioProcessorEditor::updateStatus()
                 statusLabel.setColour(juce::Label::textColourId, juce::Colours::orange);
                 break;
             case PulseGenerator::SyncToLink:
-#ifdef ABLETON_LINK_ENABLED
+#if JucePlugin_Build_Standalone
                 if (pulseGen.isLinkEnabled())
                 {
                     statusText += "Link Sync - " + juce::String(pulseGen.getCurrentBPM(), 1) + " BPM";

@@ -23,7 +23,7 @@ private:
     juce::ComboBox syncModeComboBox;
     juce::Slider manualBPMSlider;
 
-#ifdef ABLETON_LINK_ENABLED
+#if JucePlugin_Build_Standalone
     juce::ToggleButton linkEnabledButton;
     juce::Label linkPeerCountLabel;
 #endif
@@ -37,7 +37,7 @@ private:
     juce::Label titleLabel;
     juce::Label statusLabel;
 
-#ifdef ABLETON_LINK_ENABLED
+#if JucePlugin_Build_Standalone
     juce::Label linkEnabledLabel;
     juce::Label linkPeerCountDescLabel;
 #endif
@@ -49,7 +49,7 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> syncModeAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> manualBPMAttachment;
 
-#ifdef ABLETON_LINK_ENABLED
+#if JucePlugin_Build_Standalone
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> linkEnabledAttachment;
 #endif
 

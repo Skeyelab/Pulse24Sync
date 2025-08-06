@@ -4,6 +4,7 @@
 
 // Simplified Ableton Link wrapper for Projucer builds
 // This provides the interface without requiring external Link dependencies
+// Link features are only available in standalone builds
 class AbletonLinkWrapper
 {
 public:
