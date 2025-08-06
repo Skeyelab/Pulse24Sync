@@ -324,33 +324,37 @@ jobs:
 
       - name: Validate build artifacts (Windows)
         if: matrix.os == 'Windows'
-        shell: cmd
+        shell: powershell
         run: |
-          echo Validating build artifacts...
-          set artifacts_found=false
-          if exist "Builds\VisualStudio2022\x64\Release" (
-            echo Windows build directory exists
-            if exist "Builds\VisualStudio2022\x64\Release\VST3\Pulse24Sync.vst3\Contents\x86_64-win\Pulse24Sync.vst3" (
-              echo VST3 plugin found
-              set artifacts_found=true
-            )
-            if exist "Builds\VisualStudio2022\x64\Release\Standalone Plugin\Pulse24Sync.exe" (
-              echo Standalone executable found
-              set artifacts_found=true
-            )
-            if "%artifacts_found%"=="true" (
-              echo Build artifacts validation passed
-            ) else (
-              echo No valid build artifacts found!
-              echo Build directory contents:
-              dir "Builds\VisualStudio2022\x64\Release" /s /b
-              exit /b 1
-            )
-          ) else (
-            echo No valid build artifacts found!
-            echo Directory not found
-            exit /b 1
-          )
+          Write-Host "Validating build artifacts..."
+          $artifacts_found = $false
+          
+          if (Test-Path "Builds\VisualStudio2022\x64\Release") {
+            Write-Host "Windows build directory exists"
+            
+            if (Test-Path "Builds\VisualStudio2022\x64\Release\VST3\Pulse24Sync.vst3\Contents\x86_64-win\Pulse24Sync.vst3") {
+              Write-Host "VST3 plugin found"
+              $artifacts_found = $true
+            }
+            
+            if (Test-Path "Builds\VisualStudio2022\x64\Release\Standalone Plugin\Pulse24Sync.exe") {
+              Write-Host "Standalone executable found"
+              $artifacts_found = $true
+            }
+            
+            if ($artifacts_found) {
+              Write-Host "Build artifacts validation passed"
+            } else {
+              Write-Host "No valid build artifacts found!"
+              Write-Host "Build directory contents:"
+              Get-ChildItem "Builds\VisualStudio2022\x64\Release" -Recurse | Select-Object FullName
+              exit 1
+            }
+          } else {
+            Write-Host "No valid build artifacts found!"
+            Write-Host "Directory not found"
+            exit 1
+          }
 
       - name: Validate build artifacts (Linux)
         if: matrix.os == 'ubuntu-24.04'
