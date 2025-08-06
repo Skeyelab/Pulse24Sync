@@ -15,19 +15,15 @@ jobs:
           - os: macOS
             artifact-name: macos-builds
             build-path: |
-              Builds/MacOSX/build/Release/Pulse24Sync.vst3
-              Builds/MacOSX/build/Release/Pulse24Sync.component
-              Builds/MacOSX/build/Release/Pulse24Sync.app
+              Builds/MacOSX/build/Release/dist/
           - os: Windows
             artifact-name: windows-builds
             build-path: |
-              Builds/VisualStudio2022/x64/Release/Pulse24Sync.vst3
-              Builds/VisualStudio2022/x64/Release/Pulse24Sync.exe
+              Builds/VisualStudio2022/x64/Release/dist/
           - os: ubuntu-24.04
             artifact-name: linux-builds
             build-path: |
-              build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3
-              build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync
+              dist/
 
     steps:
       - name: Checkout code
@@ -208,6 +204,14 @@ jobs:
 
           echo "Build completed successfully"
 
+      - name: Create clean distribution (macOS)
+        if: matrix.os == 'macOS'
+        run: |
+          echo "Creating clean distribution for macOS..."
+          cd Builds/MacOSX/build/Release
+          chmod +x $GITHUB_WORKSPACE/create-macos-distribution.sh
+          $GITHUB_WORKSPACE/create-macos-distribution.sh
+
       - name: Cleanup macOS build artifacts
         if: matrix.os == 'macOS' && always()
         run: |
@@ -236,6 +240,41 @@ jobs:
 
           echo Build completed successfully
 
+      - name: Create clean distribution (Windows)
+        if: matrix.os == 'Windows'
+        shell: cmd
+        run: |
+          echo Creating clean distribution for Windows...
+          cd Builds\VisualStudio2022\x64\Release
+          
+          REM Check if we have the build files
+          if not exist "VST3\Pulse24Sync.vst3" (
+              echo ERROR: VST3 plugin not found at VST3\Pulse24Sync.vst3
+              exit /b 1
+          )
+          
+          echo 📦 Creating clean distribution from existing build...
+          
+          REM Create distribution directory
+          if exist "dist" rd /s /q "dist" >nul 2>&1
+          mkdir "dist"
+          
+          REM Copy VST3 plugin
+          echo   - Copying VST3 plugin...
+          xcopy "VST3\Pulse24Sync.vst3" "dist\Pulse24Sync.vst3\" /E /I /Y >nul
+          
+          REM Copy standalone application
+          if exist "Standalone Plugin\Pulse24Sync.exe" (
+              echo   - Copying standalone application...
+              copy "Standalone Plugin\Pulse24Sync.exe" "dist\Pulse24Sync.exe" >nul
+          )
+          
+          echo 📊 Distribution created in 'dist' folder:
+          if exist "dist" (
+              for /f "tokens=*" %%i in ('dir /s "dist" ^| find "File(s)"') do echo   %%i
+              for /f "tokens=*" %%i in ('dir /s "dist" ^| find "Dir(s)"') do echo   %%i
+          )
+
       - name: Cleanup Windows build artifacts
         if: matrix.os == 'Windows' && always()
         shell: powershell
@@ -257,14 +296,25 @@ jobs:
           
           ./build.sh
 
-
+      - name: Create clean distribution (Linux)
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          echo "Creating clean distribution for Linux..."
+          # For Linux, we'll create a simple distribution from the build artifacts
+          mkdir -p dist
+          if [ -d "build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3" ]; then
+            cp -R build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3 dist/
+          fi
+          if [ -f "build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync" ]; then
+            cp build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync dist/
+          fi
 
       - name: Show build status (macOS)
         if: matrix.os == 'macOS'
         run: |
           echo "🔨 Built from source using pre-installed build tools"
           echo "📦 macOS artifacts:"
-          find Builds/MacOSX/build/Release/ -name "*.vst3" -o -name "*.component" -o -name "*.app" 2>/dev/null || echo "  (checking built artifacts...)"
+          find Builds/MacOSX/build/Release/dist/ -name "*.vst3" -o -name "*.component" -o -name "*.app" 2>/dev/null || echo "  (checking built artifacts...)"
 
       - name: Show build status (Windows)
         if: matrix.os == 'Windows'
@@ -273,7 +323,7 @@ jobs:
           Write-Host "🔨 Built from source using pre-installed build tools"
           Write-Host "📦 Windows artifacts:"
 
-          $artifacts = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\" -Recurse -Include "*.vst3", "*.exe" -ErrorAction SilentlyContinue
+          $artifacts = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\dist\" -Recurse -Include "*.vst3", "*.exe" -ErrorAction SilentlyContinue
           if ($artifacts) {
             $artifacts | ForEach-Object { Write-Host "  $($_.Name)" }
           } else {
@@ -285,7 +335,7 @@ jobs:
         run: |
           echo "🔨 Built from source using pre-installed build tools"
           echo "📦 Linux artifacts:"
-          find build/Pulse24Sync_artefacts/Release/ -name "*.vst3" -o -name "Pulse24Sync" 2>/dev/null || echo "  (checking built artifacts...)"
+          find dist/ -name "*.vst3" -o -name "Pulse24Sync" 2>/dev/null || echo "  (checking built artifacts...)"
 
       # Verify that we have valid build artifacts
       - name: Validate build artifacts (macOS)
@@ -294,20 +344,20 @@ jobs:
           echo "🔍 Validating build artifacts..."
           artifacts_found=false
 
-          # Check for macOS artifacts
-          if [ -d "Builds/MacOSX/build/Release" ]; then
-            echo "✅ macOS build directory exists"
+          # Check for macOS artifacts in distribution directory
+          if [ -d "Builds/MacOSX/build/Release/dist" ]; then
+            echo "✅ macOS distribution directory exists"
 
             # Look for expected plugin formats
-            if find Builds/MacOSX/build/Release -name "*.vst3" | grep -q .; then
+            if find Builds/MacOSX/build/Release/dist -name "*.vst3" | grep -q .; then
               echo "✅ VST3 plugin found"
               artifacts_found=true
             fi
-            if find Builds/MacOSX/build/Release -name "*.component" | grep -q .; then
+            if find Builds/MacOSX/build/Release/dist -name "*.component" | grep -q .; then
               echo "✅ Audio Unit plugin found"
               artifacts_found=true
             fi
-            if find Builds/MacOSX/build/Release -name "*.app" | grep -q .; then
+            if find Builds/MacOSX/build/Release/dist -name "*.app" | grep -q .; then
               echo "✅ Standalone app found"
               artifacts_found=true
             fi
@@ -315,8 +365,8 @@ jobs:
 
           if [ "$artifacts_found" = "false" ]; then
             echo "❌ No valid build artifacts found!"
-            echo "Build directory contents:"
-            ls -la Builds/MacOSX/build/Release/ 2>/dev/null || echo "Directory not found"
+            echo "Distribution directory contents:"
+            ls -la Builds/MacOSX/build/Release/dist/ 2>/dev/null || echo "Directory not found"
             exit 1
           else
             echo "✅ Build artifacts validation passed"
@@ -329,18 +379,18 @@ jobs:
           Write-Host "🔍 Validating build artifacts..."
           $artifactsFound = $false
 
-          # Check for Windows artifacts
-          if (Test-Path "Builds\VisualStudio2022\x64\Release") {
-            Write-Host "✅ Windows build directory exists"
+          # Check for Windows artifacts in distribution directory
+          if (Test-Path "Builds\VisualStudio2022\x64\Release\dist") {
+            Write-Host "✅ Windows distribution directory exists"
 
             # Look for expected plugin formats
-            $vst3Files = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release" -Recurse -Include "*.vst3" -ErrorAction SilentlyContinue
+            $vst3Files = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\dist" -Recurse -Include "*.vst3" -ErrorAction SilentlyContinue
             if ($vst3Files) {
               Write-Host "✅ VST3 plugin found"
               $artifactsFound = $true
             }
 
-            $exeFiles = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release" -Recurse -Include "*.exe" -ErrorAction SilentlyContinue
+            $exeFiles = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\dist" -Recurse -Include "*.exe" -ErrorAction SilentlyContinue
             if ($exeFiles) {
               Write-Host "✅ Standalone executable found"
               $artifactsFound = $true
@@ -349,9 +399,9 @@ jobs:
 
           if (-not $artifactsFound) {
             Write-Host "❌ No valid build artifacts found!"
-            Write-Host "Build directory contents:"
-            if (Test-Path "Builds\VisualStudio2022\x64\Release") {
-              Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release" -Recurse -File | Select-Object -First 10 | ForEach-Object { Write-Host "  $($_.Name)" }
+            Write-Host "Distribution directory contents:"
+            if (Test-Path "Builds\VisualStudio2022\x64\Release\dist") {
+              Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\dist" -Recurse -File | Select-Object -First 10 | ForEach-Object { Write-Host "  $($_.Name)" }
             } else {
               Write-Host "Directory not found"
             }
@@ -366,17 +416,17 @@ jobs:
           echo "🔍 Validating build artifacts..."
           artifacts_found=false
 
-          # Check for Linux artifacts
-          if [ -d "build/Pulse24Sync_artefacts/Release" ]; then
-            echo "✅ Linux build directory exists"
+          # Check for Linux artifacts in distribution directory
+          if [ -d "dist" ]; then
+            echo "✅ Linux distribution directory exists"
 
             # Look for expected plugin formats
-            if find build/Pulse24Sync_artefacts/Release -name "*.vst3" | grep -q .; then
+            if find dist -name "*.vst3" | grep -q .; then
               echo "✅ VST3 plugin found"
               artifacts_found=true
             fi
 
-            if [ -f "build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync" ]; then
+            if [ -f "dist/Pulse24Sync" ]; then
               echo "✅ Standalone executable found"
               artifacts_found=true
             fi
@@ -384,9 +434,9 @@ jobs:
 
           if [ "$artifacts_found" = false ]; then
             echo "❌ No valid build artifacts found!"
-            echo "Build directory contents:"
-            if [ -d "build/Pulse24Sync_artefacts/Release" ]; then
-              find build/Pulse24Sync_artefacts/Release -type f | head -10
+            echo "Distribution directory contents:"
+            if [ -d "dist" ]; then
+              find dist -type f | head -10
             else
               echo "Directory not found"
             fi
