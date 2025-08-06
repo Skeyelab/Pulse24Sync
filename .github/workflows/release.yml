@@ -328,13 +328,13 @@ jobs:
         run: |
           echo Validating build artifacts...
           set artifacts_found=false
-          if exist "Builds\VisualStudio2022\x64\Release\dist" (
-            echo Windows distribution directory exists
-            if exist "Builds\VisualStudio2022\x64\Release\dist\Pulse24Sync.vst3" (
+          if exist "Builds\VisualStudio2022\x64\Release" (
+            echo Windows build directory exists
+            if exist "Builds\VisualStudio2022\x64\Release\Pulse24Sync.vst3" (
               echo VST3 plugin found
               set artifacts_found=true
             )
-            if exist "Builds\VisualStudio2022\x64\Release\dist\Pulse24Sync.exe" (
+            if exist "Builds\VisualStudio2022\x64\Release\Pulse24Sync.exe" (
               echo Standalone executable found
               set artifacts_found=true
             )
@@ -342,8 +342,8 @@ jobs:
               echo Build artifacts validation passed
             ) else (
               echo No valid build artifacts found!
-              echo Distribution directory contents:
-              dir "Builds\VisualStudio2022\x64\Release\dist" /s /b
+              echo Build directory contents:
+              dir "Builds\VisualStudio2022\x64\Release" /s /b
               exit /b 1
             )
           ) else (
