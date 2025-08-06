@@ -25,6 +25,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache JUCE modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/JUCE
+            /Applications/JUCE 2/modules
+            Builds\VisualStudio2022\build
+            $env:LOCALAPPDATA\Microsoft\VisualStudio\*\MSBuild\Current\Bin\Roslyn
+            $env:TEMP\juce-cache
+          key: ${{ runner.os }}-juce-modules-${{ hashFiles('Pulse24Sync.jucer') }}
+          restore-keys: |
+            ${{ runner.os }}-juce-modules-
+
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData
+            Builds/MacOSX/build
+            Builds\VisualStudio2022\x64\Release
+            Builds\VisualStudio2022\Release
+            $env:TEMP\vs-cache
+          key: ${{ runner.os }}-build-cache-${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}
+          restore-keys: |
+            ${{ runner.os }}-build-cache-
+
       - name: Setup JUCE and Projucer (macOS)
         if: matrix.os == 'macOS'
         run: |
@@ -244,25 +270,25 @@ jobs:
       - name: Create release packages
         run: |
           mkdir -p release-packages
-          
+
           # macOS packages
           if [ -d "./artifacts/macos-builds" ]; then
             echo "Creating macOS packages..."
-            
+
             # VST3
             if [ -d "./artifacts/macos-builds/Pulse24Sync.vst3" ]; then
               cd ./artifacts/macos-builds
               zip -r ../../release-packages/Pulse24Sync-macOS-vst3.zip Pulse24Sync.vst3
               cd ../..
             fi
-            
+
             # Audio Unit
             if [ -d "./artifacts/macos-builds/Pulse24Sync.component" ]; then
               cd ./artifacts/macos-builds
               zip -r ../../release-packages/Pulse24Sync-macOS-au.zip Pulse24Sync.component
               cd ../..
             fi
-            
+
             # Standalone
             if [ -d "./artifacts/macos-builds/Pulse24Sync.app" ]; then
               cd ./artifacts/macos-builds
@@ -270,18 +296,18 @@ jobs:
               cd ../..
             fi
           fi
-          
+
           # Windows packages
           if [ -d "./artifacts/windows-builds" ]; then
             echo "Creating Windows packages..."
-            
+
             # VST3
             if [ -d "./artifacts/windows-builds/Pulse24Sync.vst3" ]; then
               cd ./artifacts/windows-builds
               zip -r ../../release-packages/Pulse24Sync-Windows-vst3.zip Pulse24Sync.vst3
               cd ../..
             fi
-            
+
             # Standalone
             if [ -f "./artifacts/windows-builds/Pulse24Sync.exe" ]; then
               cd ./artifacts/windows-builds
@@ -289,7 +315,7 @@ jobs:
               cd ../..
             fi
           fi
-          
+
           echo "Created packages:"
           ls -la release-packages/
 
