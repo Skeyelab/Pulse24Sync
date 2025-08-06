@@ -212,6 +212,15 @@ jobs:
           chmod +x $GITHUB_WORKSPACE/create-macos-distribution.sh
           $GITHUB_WORKSPACE/create-macos-distribution.sh
 
+      - name: Verify distribution (macOS)
+        if: matrix.os == 'macOS'
+        run: |
+          echo "Checking distribution artifacts:"
+          ls -la Builds/MacOSX/build/Release/dist/
+          echo ""
+          echo "Distribution size:"
+          du -sh Builds/MacOSX/build/Release/dist/*
+
       - name: Cleanup macOS build artifacts
         if: matrix.os == 'macOS' && always()
         run: |
@@ -275,6 +284,16 @@ jobs:
               for /f "tokens=*" %%i in ('dir /s "dist" ^| find "Dir(s)"') do echo   %%i
           )
 
+      - name: Verify distribution (Windows)
+        if: matrix.os == 'Windows'
+        shell: cmd
+        run: |
+          echo Checking distribution artifacts:
+          dir Builds\VisualStudio2022\x64\Release\dist
+          echo.
+          echo Distribution size:
+          dir Builds\VisualStudio2022\x64\Release\dist /s
+
       - name: Cleanup Windows build artifacts
         if: matrix.os == 'Windows' && always()
         shell: powershell
@@ -308,6 +327,15 @@ jobs:
           if [ -f "build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync" ]; then
             cp build/Pulse24Sync_artefacts/Release/Standalone/Pulse24Sync dist/
           fi
+
+      - name: Verify distribution (Linux)
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          echo "Checking distribution artifacts:"
+          ls -la dist/
+          echo ""
+          echo "Distribution size:"
+          du -sh dist/*
 
       - name: Show build status (macOS)
         if: matrix.os == 'macOS'
