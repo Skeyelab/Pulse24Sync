@@ -5,6 +5,36 @@
 
 set -e  # Exit on any error
 
+# Cleanup function to ensure temporary files are cleaned up
+cleanup() {
+    local exit_code=$?
+    echo "🧹 Performing cleanup..."
+    
+    # Clean up temporary files
+    find . -name "*.tmp" -o -name "*.temp" -o -name "*~" -type f -delete 2>/dev/null || true
+    
+    # Clean up Xcode temporary files
+    find . -name "*.build" -type d -exec rm -rf {} + 2>/dev/null || true
+    find . -name "DerivedData" -type d -exec rm -rf {} + 2>/dev/null || true
+    
+    # Clean up macOS system files
+    find . -name ".DS_Store" -type f -delete 2>/dev/null || true
+    
+    if [ $exit_code -ne 0 ]; then
+        echo "❌ Build failed - temporary files cleaned up"
+        # Clean up failed build artifacts
+        if [ -d "Builds/MacOSX/build" ]; then
+            echo "  - Cleaning up failed build artifacts..."
+            rm -rf Builds/MacOSX/build
+        fi
+    fi
+    
+    exit $exit_code
+}
+
+# Set trap to ensure cleanup runs on script exit
+trap cleanup EXIT INT TERM
+
 echo "🎵 Building Pulse24Sync VST Plugin for macOS..."
 echo "================================================"
 
@@ -47,3 +77,5 @@ echo "   ~/Library/Audio/Plug-Ins/VST3/Pulse24Sync.vst3"
 echo "   ~/Library/Audio/Plug-Ins/Components/Pulse24Sync.component"
 echo ""
 echo "🎉 You can now load Pulse24Sync in your DAW!"
+
+# Note: cleanup() will be called automatically, but successful builds keep artifacts
