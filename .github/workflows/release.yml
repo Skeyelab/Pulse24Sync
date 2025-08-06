@@ -318,13 +318,53 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Check if a release with the same tag already exists
+      - name: Check existing release
+        id: check-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "release-exists=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Release $TAG_NAME already exists - checking if assets need update"
+            
+            # Check if assets already exist
+            EXISTING_ASSETS=$(gh release view "$TAG_NAME" --json assets --jq '.assets[].name' | tr '\n' ' ')
+            echo "existing-assets=$EXISTING_ASSETS" >> $GITHUB_OUTPUT
+            
+            # Check if we have all expected assets
+            EXPECTED_ASSETS="Pulse24Sync-macOS-vst3.zip Pulse24Sync-macOS-au.zip Pulse24Sync-macOS-standalone.zip Pulse24Sync-Windows-vst3.zip Pulse24Sync-Windows-standalone.zip"
+            MISSING_ASSETS=""
+            
+            for asset in $EXPECTED_ASSETS; do
+              if ! echo "$EXISTING_ASSETS" | grep -q "$asset"; then
+                MISSING_ASSETS="$MISSING_ASSETS $asset"
+              fi
+            done
+            
+            if [ -n "$MISSING_ASSETS" ]; then
+              echo "missing-assets=true" >> $GITHUB_OUTPUT
+              echo "📦 Missing assets detected: $MISSING_ASSETS"
+            else
+              echo "missing-assets=false" >> $GITHUB_OUTPUT
+              echo "✅ All assets already exist for this release"
+            fi
+          else
+            echo "release-exists=false" >> $GITHUB_OUTPUT
+            echo "missing-assets=true" >> $GITHUB_OUTPUT
+            echo "🆕 Creating new release $TAG_NAME"
+          fi
+
       - name: Download all artifacts
+        if: steps.check-release.outputs.missing-assets == 'true'
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
       - name: Create Release
         id: create_release
+        if: steps.check-release.outputs.release-exists == 'false'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -347,7 +387,18 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Get existing release upload URL
+        id: get_release
+        if: steps.check-release.outputs.release-exists == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          UPLOAD_URL=$(gh release view "$TAG_NAME" --json uploadUrl --jq '.uploadUrl')
+          echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
+
       - name: List available artifacts
+        if: steps.check-release.outputs.missing-assets == 'true'
         run: |
           echo "=== macOS Artifacts ==="
           find ./artifacts/macos-builds -type f -name "*.vst3" -o -name "*.component" -o -name "*.app" | head -20
@@ -363,7 +414,15 @@ jobs:
           du -sh ./artifacts/macos-builds/ || echo "macos-builds not found"
           du -sh ./artifacts/windows-builds/ || echo "windows-builds not found"
 
+      - name: Skip asset creation
+        if: steps.check-release.outputs.missing-assets == 'false'
+        run: |
+          echo "⚡ All assets already exist for release ${{ github.ref_name }}"
+          echo "🚀 Skipping asset creation and upload"
+          echo "📦 Existing assets: ${{ steps.check-release.outputs.existing-assets }}"
+
       - name: Create release packages
+        if: steps.check-release.outputs.missing-assets == 'true'
         run: |
           mkdir -p release-packages
           
@@ -416,55 +475,60 @@ jobs:
           ls -la release-packages/
 
       - name: Upload macOS VST3
+        if: steps.check-release.outputs.missing-assets == 'true'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ steps.create_release.outputs.upload_url || steps.get_release.outputs.upload_url }}
           asset_path: ./release-packages/Pulse24Sync-macOS-vst3.zip
           asset_name: Pulse24Sync-macOS-vst3.zip
           asset_content_type: application/zip
         continue-on-error: true
 
       - name: Upload macOS Audio Unit
+        if: steps.check-release.outputs.missing-assets == 'true'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ steps.create_release.outputs.upload_url || steps.get_release.outputs.upload_url }}
           asset_path: ./release-packages/Pulse24Sync-macOS-au.zip
           asset_name: Pulse24Sync-macOS-au.zip
           asset_content_type: application/zip
         continue-on-error: true
 
       - name: Upload macOS Standalone
+        if: steps.check-release.outputs.missing-assets == 'true'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ steps.create_release.outputs.upload_url || steps.get_release.outputs.upload_url }}
           asset_path: ./release-packages/Pulse24Sync-macOS-standalone.zip
           asset_name: Pulse24Sync-macOS-standalone.zip
           asset_content_type: application/zip
         continue-on-error: true
 
       - name: Upload Windows VST3
+        if: steps.check-release.outputs.missing-assets == 'true'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ steps.create_release.outputs.upload_url || steps.get_release.outputs.upload_url }}
           asset_path: ./release-packages/Pulse24Sync-Windows-vst3.zip
           asset_name: Pulse24Sync-Windows-vst3.zip
           asset_content_type: application/zip
         continue-on-error: true
 
       - name: Upload Windows Standalone
+        if: steps.check-release.outputs.missing-assets == 'true'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ steps.create_release.outputs.upload_url || steps.get_release.outputs.upload_url }}
           asset_path: ./release-packages/Pulse24Sync-Windows-standalone.zip
           asset_name: Pulse24Sync-Windows-standalone.zip
           asset_content_type: application/zip

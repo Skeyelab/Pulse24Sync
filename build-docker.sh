@@ -9,25 +9,46 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Cleanup function to ensure resources are cleaned up on exit
+# Calculate content hash for cache invalidation
+echo "🔍 Calculating content hash for cache optimization..."
+CONTENT_HASH=$(find Source/ CMakeLists.txt Pulse24Sync.jucer -type f -exec sha256sum {} \; 2>/dev/null | sha256sum | cut -d' ' -f1 | head -c 12)
+IMAGE_NAME="pulse24sync-build:cache-${CONTENT_HASH}"
+CONTAINER_NAME="build-container-${CONTENT_HASH}"
+
+echo "📋 Using cache key: ${CONTENT_HASH}"
+
+# Check if we already have a cached image with this content
+if docker images --format '{{.Repository}}:{{.Tag}}' | grep -q "^${IMAGE_NAME}$"; then
+    echo "✅ Found cached build for current content - skipping rebuild"
+    SKIP_BUILD=true
+else
+    echo "🔨 Content changed or no cache found - building new image"
+    SKIP_BUILD=false
+fi
+
+# Cleanup function for failed builds and old containers
 cleanup() {
     local exit_code=$?
     echo "🧹 Performing cleanup..."
     
-    # Stop and remove container if it exists
-    if docker ps -a --format '{{.Names}}' | grep -q "^build-container$"; then
+    # Stop and remove container if it exists (always clean containers)
+    if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
         echo "  - Stopping and removing build container..."
-        docker stop build-container >/dev/null 2>&1 || true
-        docker rm build-container >/dev/null 2>&1 || true
+        docker stop ${CONTAINER_NAME} >/dev/null 2>&1 || true
+        docker rm ${CONTAINER_NAME} >/dev/null 2>&1 || true
     fi
     
-    # Remove Docker image to prevent accumulation
-    if docker images --format '{{.Repository}}:{{.Tag}}' | grep -q "^pulse24sync-build:latest$"; then
-        echo "  - Removing Docker image..."
-        docker rmi pulse24sync-build:latest >/dev/null 2>&1 || true
+    # Only remove Docker image if build failed
+    if [ $exit_code -ne 0 ] && docker images --format '{{.Repository}}:{{.Tag}}' | grep -q "^${IMAGE_NAME}$"; then
+        echo "  - Build failed: removing incomplete Docker image..."
+        docker rmi ${IMAGE_NAME} >/dev/null 2>&1 || true
     fi
     
-    # Clean up any dangling images
+    # Clean up old cached images (keep last 3 cache entries)
+    echo "  - Cleaning up old cached images..."
+    docker images --format '{{.Repository}}:{{.Tag}}' | grep '^pulse24sync-build:cache-' | sort -r | tail -n +4 | xargs -r docker rmi >/dev/null 2>&1 || true
+    
+    # Clean up dangling images
     if [ "$(docker images -f "dangling=true" -q)" ]; then
         echo "  - Cleaning up dangling Docker images..."
         docker image prune -f >/dev/null 2>&1 || true
@@ -40,17 +61,23 @@ cleanup() {
 # Set trap to ensure cleanup runs on script exit (success, failure, or interruption)
 trap cleanup EXIT INT TERM
 
-echo "📦 Building Docker image..."
-docker build -t pulse24sync-build .
+if [ "$SKIP_BUILD" = "false" ]; then
+    echo "📦 Building Docker image with cache key ${CONTENT_HASH}..."
+    docker build -t ${IMAGE_NAME} .
+else
+    echo "📦 Using cached Docker image ${IMAGE_NAME}"
+fi
 
 echo "🚀 Running build container..."
-docker run -d --name build-container pulse24sync-build tail -f /dev/null
+docker run -d --name ${CONTAINER_NAME} ${IMAGE_NAME} tail -f /dev/null
 
 echo "📋 Copying build artifacts..."
 mkdir -p linux-builds
-docker cp build-container:/workspace/build ./linux-builds
+docker cp ${CONTAINER_NAME}:/workspace/build ./linux-builds
 
 echo "✅ Build completed! Check the 'linux-builds' directory for artifacts."
 ls -la linux-builds/
+
+echo "💾 Cached image ${IMAGE_NAME} preserved for future builds with same content"
 
 # Note: cleanup() will be called automatically due to the trap

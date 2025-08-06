@@ -14,59 +14,40 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Cache Docker layers and built images
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ hashFiles('Source/**', 'CMakeLists.txt', 'Pulse24Sync.jucer', 'Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      # Setup Docker Buildx for advanced caching
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build Linux with Docker and CMake
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          tags: pulse24sync-build:latest
+          outputs: type=docker,dest=/tmp/pulse24sync-image.tar
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      # Move cache to prevent unlimited growth
+      - name: Move cache
         run: |
-          # Create a Dockerfile for the build environment
-          cat > Dockerfile << 'EOF'
-          FROM ubuntu:24.04
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
-          # Install dependencies
-          RUN apt-get update && apt-get install -y \
-            build-essential \
-            cmake \
-            git \
-            libasound2-dev \
-            libjack-jackd2-dev \
-            libfreetype6-dev \
-            libcurl4-openssl-dev \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            libx11-dev \
-            libxrandr-dev \
-            libxinerama-dev \
-            libxcursor-dev \
-            libxi-dev \
-            pkg-config \
-            && rm -rf /var/lib/apt/lists/*
-
-          # Set working directory
-          WORKDIR /workspace
-
-          # Copy project files
-          COPY . .
-
-          # Clone JUCE
-          RUN git clone https://github.com/juce-framework/JUCE.git && \
-              cd JUCE && \
-              git checkout 7.0.12
-
-          # Create build directory and build with CMake
-          RUN mkdir -p build && \
-              cd build && \
-              cmake .. -DCMAKE_BUILD_TYPE=Release \
-                -DJUCE_BUILD_EXTRAS=OFF \
-                -DJUCE_BUILD_EXAMPLES=OFF \
-                -DJUCE_ENABLE_MODULE_SOURCE_GROUPS=ON && \
-              make -j$(nproc)
-
-          # Keep container running to copy artifacts
-          CMD ["tail", "-f", "/dev/null"]
-          EOF
-
-          # Build and run the Docker container
-          docker build -t pulse24sync-build .
-          docker run -d --name build-container pulse24sync-build tail -f /dev/null
-
+      - name: Extract build artifacts
+        run: |
+          # Load and run the built image
+          docker load -i /tmp/pulse24sync-image.tar
+          docker run -d --name build-container pulse24sync-build:latest tail -f /dev/null
+          
           # Copy build artifacts from container
           docker cp build-container:/workspace/build ./linux-builds
 
@@ -78,13 +59,10 @@ jobs:
           docker rm build-container || true
           
           # Remove Docker image
-          docker rmi pulse24sync-build || true
+          docker rmi pulse24sync-build:latest || true
           
           # Clean up dangling images and containers
           docker system prune -f || true
-          
-          # Remove temporary Dockerfile
-          rm -f Dockerfile
 
       - name: Upload Linux build artifacts
         uses: actions/upload-artifact@v4
@@ -99,7 +77,41 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Cache JUCE installation and generated project files
+      - name: Cache JUCE and Projucer files
+        uses: actions/cache@v4
+        with:
+          path: |
+            Builds/
+            JuceLibraryCode/
+          key: ${{ runner.os }}-juce-projucer-${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}
+          restore-keys: |
+            ${{ runner.os }}-juce-projucer-
+
+      # Cache Xcode build artifacts
+      - name: Cache Xcode build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            Builds/MacOSX/build/
+            ~/Library/Developer/Xcode/DerivedData/
+          key: ${{ runner.os }}-xcode-${{ hashFiles('Source/**', 'Pulse24Sync.jucer') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-
+
+      - name: Check for cached build
+        id: check-cache
+        run: |
+          if [ -f "Builds/MacOSX/build/Release/Pulse24Sync.vst3/Contents/MacOS/Pulse24Sync" ]; then
+            echo "cache-hit=true" >> $GITHUB_OUTPUT
+            echo "✅ Found cached macOS build artifacts"
+          else
+            echo "cache-hit=false" >> $GITHUB_OUTPUT
+            echo "🔨 No cached build found, proceeding with full build"
+          fi
+
       - name: Setup JUCE and Projucer
+        if: steps.check-cache.outputs.cache-hit != 'true'
         run: |
           # Use pre-installed JUCE at /Applications/JUCE 2
           JUCE_PATH="/Applications/JUCE 2"
@@ -142,28 +154,34 @@ jobs:
 
           echo "Using Projucer from: $PROJUCER_PATH"
 
-          # Generate Xcode project with Projucer
-          echo "Generating Xcode project files..."
-          "$PROJUCER_PATH" --resave Pulse24Sync.jucer
-
-          # Give Projucer time to finish writing files
-          sleep 3
-
-          # Check if project files were created
+          # Only regenerate if cached files don't exist
           if [ ! -d "Builds/MacOSX" ]; then
-            echo "Error: Xcode project files were not created"
-            echo "Contents of current directory:"
-            ls -la
-            if [ -d "Builds" ]; then
-              echo "Contents of Builds directory:"
-              ls -la Builds/
+            # Generate Xcode project with Projucer
+            echo "Generating Xcode project files..."
+            "$PROJUCER_PATH" --resave Pulse24Sync.jucer
+
+            # Give Projucer time to finish writing files
+            sleep 3
+
+            # Check if project files were created
+            if [ ! -d "Builds/MacOSX" ]; then
+              echo "Error: Xcode project files were not created"
+              echo "Contents of current directory:"
+              ls -la
+              if [ -d "Builds" ]; then
+                echo "Contents of Builds directory:"
+                ls -la Builds/
+              fi
+              exit 1
             fi
-            exit 1
+
+            echo "Project files generated successfully"
+          else
+            echo "✅ Using cached Xcode project files"
           fi
 
-          echo "Project files generated successfully"
-
       - name: Build macOS Plugin
+        if: steps.check-cache.outputs.cache-hit != 'true'
         run: |
           echo "Building Pulse24Sync plugin..."
 
@@ -177,14 +195,19 @@ jobs:
 
           echo "Build completed successfully"
 
+      - name: Show cached build status
+        if: steps.check-cache.outputs.cache-hit == 'true'
+        run: |
+          echo "⚡ Using cached build artifacts - skipped compilation"
+          echo "📦 Cached artifacts:"
+          find Builds/MacOSX/build/Release/ -name "*.vst3" -o -name "*.component" -o -name "*.app" 2>/dev/null || echo "  (artifacts found in cache)"
+
       - name: Cleanup macOS build artifacts
         if: always()
         run: |
-          # Clean up temporary files
+          # Clean up temporary files but preserve cache
           find . -name "*.tmp" -o -name "*.temp" -o -name "*~" -type f -delete 2>/dev/null || true
           find . -name ".DS_Store" -type f -delete 2>/dev/null || true
-          find . -name "*.build" -type d -exec rm -rf {} + 2>/dev/null || true
-          find . -name "DerivedData" -type d -exec rm -rf {} + 2>/dev/null || true
 
       - name: Upload macOS build artifacts
         uses: actions/upload-artifact@v4
@@ -199,7 +222,42 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Cache JUCE and Projucer files
+      - name: Cache JUCE and Projucer files
+        uses: actions/cache@v4
+        with:
+          path: |
+            Builds/
+            JuceLibraryCode/
+          key: ${{ runner.os }}-juce-projucer-${{ hashFiles('Pulse24Sync.jucer', 'Source/**') }}
+          restore-keys: |
+            ${{ runner.os }}-juce-projucer-
+
+      # Cache Visual Studio build artifacts
+      - name: Cache Visual Studio build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            Builds/VisualStudio2022/x64/Release/
+            Builds/VisualStudio2022/.vs/
+          key: ${{ runner.os }}-vs-${{ hashFiles('Source/**', 'Pulse24Sync.jucer') }}
+          restore-keys: |
+            ${{ runner.os }}-vs-
+
+      - name: Check for cached build
+        id: check-cache
+        shell: powershell
+        run: |
+          if (Test-Path "Builds\VisualStudio2022\x64\Release\Pulse24Sync.vst3\Contents\x86_64-win\Pulse24Sync.vst3") {
+            Write-Output "cache-hit=true" >> $env:GITHUB_OUTPUT
+            Write-Host "✅ Found cached Windows build artifacts"
+          } else {
+            Write-Output "cache-hit=false" >> $env:GITHUB_OUTPUT
+            Write-Host "🔨 No cached build found, proceeding with full build"
+          }
+
       - name: Setup JUCE and Projucer
+        if: steps.check-cache.outputs.cache-hit != 'true'
         shell: powershell
         run: |
           # Set execution policy and run our script
@@ -234,49 +292,55 @@ jobs:
             exit 1
           }
 
-          # Generate Visual Studio project with Projucer
-          Write-Host "Generating Visual Studio project files..."
-          & $projucerPath --resave Pulse24Sync.jucer
+          # Only regenerate if cached files don't exist
+          if (!(Test-Path "Builds\VisualStudio2022")) {
+            # Generate Visual Studio project with Projucer
+            Write-Host "Generating Visual Studio project files..."
+            & $projucerPath --resave Pulse24Sync.jucer
 
-          # Note: Projucer may return non-zero exit code even on success
-          # So we check if files were actually created instead
-          Write-Host "Projucer completed. Waiting for files to be written..."
+            # Note: Projucer may return non-zero exit code even on success
+            # So we check if files were actually created instead
+            Write-Host "Projucer completed. Waiting for files to be written..."
 
-          # Give Projucer time to finish writing files
-          Start-Sleep -Seconds 3
+            # Give Projucer time to finish writing files
+            Start-Sleep -Seconds 3
 
-          Write-Host "Checking if files were created..."
+            Write-Host "Checking if files were created..."
 
-          # Check multiple possible locations for the solution file
-          $possiblePaths = @(
-            "Builds\VisualStudio2022\Pulse24Sync.sln",
-            "Builds\VisualStudio2022\x64\Release\Pulse24Sync.sln",
-            "Builds\VisualStudio2022\Release\Pulse24Sync.sln"
-          )
+            # Check multiple possible locations for the solution file
+            $possiblePaths = @(
+              "Builds\VisualStudio2022\Pulse24Sync.sln",
+              "Builds\VisualStudio2022\x64\Release\Pulse24Sync.sln",
+              "Builds\VisualStudio2022\Release\Pulse24Sync.sln"
+            )
 
-          $solutionFound = $false
-          foreach ($path in $possiblePaths) {
-            if (Test-Path $path) {
-              Write-Host "Found Visual Studio solution at: $path"
-              $solutionFound = $true
-              break
+            $solutionFound = $false
+            foreach ($path in $possiblePaths) {
+              if (Test-Path $path) {
+                Write-Host "Found Visual Studio solution at: $path"
+                $solutionFound = $true
+                break
+              }
             }
-          }
 
-          if (!$solutionFound) {
-            Write-Host "Checking what files were actually created in Builds directory:"
-            if (Test-Path "Builds") {
-              Get-ChildItem -Path "Builds" -Recurse -Name | Write-Host
-            } else {
-              Write-Host "Builds directory does not exist"
+            if (!$solutionFound) {
+              Write-Host "Checking what files were actually created in Builds directory:"
+              if (Test-Path "Builds") {
+                Get-ChildItem -Path "Builds" -Recurse -Name | Write-Host
+              } else {
+                Write-Host "Builds directory does not exist"
+              }
+              Write-Error "Visual Studio solution file was not created"
+              exit 1
             }
-            Write-Error "Visual Studio solution file was not created"
-            exit 1
-          }
 
-          Write-Host "Project files generated successfully"
+            Write-Host "Project files generated successfully"
+          } else {
+            Write-Host "✅ Using cached Visual Studio project files"
+          }
 
       - name: Build Windows Plugin
+        if: steps.check-cache.outputs.cache-hit != 'true'
         shell: cmd
         run: |
           echo Building Pulse24Sync plugin...
@@ -294,16 +358,25 @@ jobs:
 
           echo Build completed successfully
 
+      - name: Show cached build status
+        if: steps.check-cache.outputs.cache-hit == 'true'
+        shell: powershell
+        run: |
+          Write-Host "⚡ Using cached build artifacts - skipped compilation"
+          Write-Host "📦 Cached artifacts:"
+          $artifacts = Get-ChildItem -Path "Builds\VisualStudio2022\x64\Release\" -Recurse -Include "*.vst3", "*.exe" -ErrorAction SilentlyContinue
+          if ($artifacts) {
+            $artifacts | ForEach-Object { Write-Host "  $($_.Name)" }
+          } else {
+            Write-Host "  (artifacts found in cache)"
+          }
+
       - name: Cleanup Windows build artifacts
         if: always()
         shell: powershell
         run: |
-          # Clean up temporary files
+          # Clean up temporary files but preserve cache
           Get-ChildItem -Path . -Recurse -Include @("*.tmp", "*.temp", "*~", "Thumbs.db", "ehthumbs.db") -Force | Remove-Item -Force -ErrorAction SilentlyContinue
-          
-          # Clean up Visual Studio temporary files
-          Get-ChildItem -Path . -Recurse -Name "*.build" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
-          Get-ChildItem -Path . -Recurse -Name ".vs" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
 
       - name: Upload Windows build artifacts
         uses: actions/upload-artifact@v4

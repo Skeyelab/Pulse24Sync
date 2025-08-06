@@ -1,7 +1,7 @@
 # Multi-stage build for better layer management and smaller final image
 FROM ubuntu:24.04 AS builder
 
-# Install build dependencies
+# Install build dependencies in a separate layer (rarely changes)
 RUN apt-get update && apt-get install -y \
   build-essential \
   cmake \
@@ -24,8 +24,19 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /workspace
 
-# Copy only necessary build files first (for better layer caching)
-COPY CMakeLists.txt Pulse24Sync.jucer ./
+# Copy and download JUCE dependency first (changes less frequently)
+COPY CMakeLists.txt ./
+RUN mkdir -p _deps && \
+    cmake -S . -B _deps -DFETCHCONTENT_ONLY=ON \
+      -DJUCE_BUILD_EXTRAS=OFF \
+      -DJUCE_BUILD_EXAMPLES=OFF \
+      -DJUCE_BUILD_TOOLS=OFF && \
+    rm -rf _deps/CMakeFiles _deps/*.cmake _deps/CMakeCache.txt
+
+# Copy project configuration files (changes occasionally)
+COPY Pulse24Sync.jucer ./
+
+# Copy source code last (changes most frequently)
 COPY Source/ ./Source/
 
 # Clean up any existing build artifacts and cache
