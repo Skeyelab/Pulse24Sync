@@ -5,51 +5,10 @@
 class PulseGeneratorTests;
 class PluginProcessorTests;
 
-class TestApplication : public juce::ConsoleApplication
+int main(int argc, char* argv[])
 {
-public:
-    TestApplication()
-    {
-        
-    }
-
-    void initialise(const juce::String& commandLine) override
-    {
-        auto args = getArgumentList();
-        
-        bool verbose = false;
-        juce::String testCategory = "";
-        
-        for (const auto& arg : args)
-        {
-            if (arg == "--verbose" || arg == "-v")
-                verbose = true;
-            else if (arg.startsWith("--category="))
-                testCategory = arg.fromFirstOccurrenceOf("=", false, false);
-            else if (arg == "--help" || arg == "-h")
-            {
-                std::cout << "Pulse24Sync Test Runner\n"
-                          << "Usage: TestApp [options]\n"
-                          << "Options:\n"
-                          << "  --verbose, -v     Verbose output\n"
-                          << "  --category=NAME   Run only tests in specified category\n"
-                          << "  --help, -h        Show this help\n";
-                quit();
-                return;
-            }
-        }
-        
-        runTests(verbose, testCategory);
-        quit();
-    }
-
-    void shutdown() override
-    {
-    }
-
-private:
-    void runTests(bool verbose, const juce::String& testCategory)
-    {
+    // Initialize JUCE
+    juce::ScopedJuceInitialiser_GUI juceInitialiser;
     
     // Create a console logger for test output
     std::unique_ptr<juce::FileLogger> logger;
@@ -64,8 +23,33 @@ private:
         juce::Logger::writeToLog("=== Pulse24Sync Unit Tests Started ===");
     }
     
-        // Run all unit tests
-        juce::UnitTestRunner testRunner;
+    // Run all unit tests
+    juce::UnitTestRunner testRunner;
+    
+    // Parse command line arguments
+    bool verbose = false;
+    juce::String testCategory = "";
+    
+    for (int i = 1; i < argc; ++i)
+    {
+        juce::String arg(argv[i]);
+        if (arg == "--verbose" || arg == "-v")
+            verbose = true;
+        else if (arg.startsWith("--category="))
+            testCategory = arg.fromFirstOccurrenceOf("=", false, false);
+        else if (arg == "--help" || arg == "-h")
+        {
+            std::cout << "Pulse24Sync Test Runner\n"
+                      << "Usage: " << argv[0] << " [options]\n"
+                      << "Options:\n"
+                      << "  --verbose, -v     Verbose output\n"
+                      << "  --category=NAME   Run only tests in specified category\n"
+                      << "  --help, -h        Show this help\n";
+            return 0;
+        }
+    }
+    
+    // Run tests
     if (testCategory.isNotEmpty())
     {
         testRunner.runTestsInCategory(testCategory);
@@ -108,19 +92,12 @@ private:
     std::cout << "Failures: " << failures << std::endl;
     std::cout << "Result: " << (failures == 0 ? "PASSED" : "FAILED") << std::endl;
     
-        if (logger)
-        {
-            juce::Logger::writeToLog("=== Pulse24Sync Unit Tests Completed ===");
-            juce::Logger::writeToLog("Total failures: " + juce::String(failures));
-            juce::Logger::setCurrentLogger(nullptr);
-        }
-        
-        // Set exit code for the application
-        if (failures > 0)
-            setApplicationReturnValue(1);
-        else
-            setApplicationReturnValue(0);
+    if (logger)
+    {
+        juce::Logger::writeToLog("=== Pulse24Sync Unit Tests Completed ===");
+        juce::Logger::writeToLog("Total failures: " + juce::String(failures));
+        juce::Logger::setCurrentLogger(nullptr);
     }
-};
-
-START_JUCE_APPLICATION(TestApplication)
+    
+    return failures > 0 ? 1 : 0;
+}

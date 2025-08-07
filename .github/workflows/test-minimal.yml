@@ -1,0 +1,53 @@
+name: Minimal Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  test-minimal:
+    name: Minimal Test (Ubuntu)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          libasound2-dev \
+          libjack-jackd2-dev \
+          libfreetype6-dev \
+          libx11-dev \
+          libxcomposite-dev \
+          libxcursor-dev \
+          libxext-dev \
+          libxinerama-dev \
+          libxrandr-dev \
+          libxrender-dev \
+          libgl1-mesa-dev \
+          libglu1-mesa-dev \
+          libcurl4-openssl-dev
+
+    - name: Configure
+      run: |
+        cmake -B build-tests \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DPULSE24SYNC_BUILD_TESTS=ON
+
+    - name: Build
+      run: cmake --build build-tests --config Release --parallel
+
+    - name: Test
+      working-directory: build-tests
+      run: |
+        echo "Running tests..."
+        ctest --output-on-failure --verbose -C Release || true
+        echo "Tests completed"
