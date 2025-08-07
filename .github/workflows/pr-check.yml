@@ -52,10 +52,7 @@ jobs:
 
     - name: Configure CMake
       run: |
-        cmake -B build-tests \
-          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-          -DPULSE24SYNC_BUILD_TESTS=ON \
-          -G Ninja
+        cmake -B build-tests -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPULSE24SYNC_BUILD_TESTS=ON -G Ninja
 
     - name: Build tests
       run: cmake --build build-tests --config ${{ env.BUILD_TYPE }} --parallel
@@ -174,9 +171,7 @@ jobs:
 
     - name: Configure CMake
       run: |
-        cmake -B build \
-          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-          -DPULSE24SYNC_BUILD_TESTS=OFF
+        cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPULSE24SYNC_BUILD_TESTS=OFF
 
     - name: Build plugin
       run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
