@@ -7,6 +7,8 @@ PulseGenerator::PulseGenerator()
 void PulseGenerator::prepare(double newSampleRate)
 {
     sampleRate = newSampleRate;
+    // Update pulse duration based on sample rate (keep it around 22ms)
+    pulseDurationSamples = static_cast<int>(sampleRate * 0.022); // 22ms pulse duration
     reset();
     updatePulseRate();
 }
@@ -15,10 +17,12 @@ void PulseGenerator::reset()
 {
     currentPosition = 0.0;
     nextPulseTime = 0.0;
+    currentPulsePosition = 0;
+    pulseActive = false;
     updatePulseRate();
 }
 
-void PulseGenerator::process(int numSamples, double currentSampleRate, juce::MidiBuffer& midiMessages)
+void PulseGenerator::process(int numSamples, double currentSampleRate, juce::AudioBuffer<float>& audioBuffer)
 {
     if (!isEnabled || !hostIsPlaying)
         return;
@@ -27,6 +31,7 @@ void PulseGenerator::process(int numSamples, double currentSampleRate, juce::Mid
     if (currentSampleRate != sampleRate)
     {
         sampleRate = currentSampleRate;
+        pulseDurationSamples = static_cast<int>(sampleRate * 0.022); // Update pulse duration
         updatePulseRate();
     }
 
@@ -36,11 +41,33 @@ void PulseGenerator::process(int numSamples, double currentSampleRate, juce::Mid
     // Process each sample
     for (int sample = 0; sample < numSamples; ++sample)
     {
-        // Check if it's time for a pulse
-        if (currentPosition >= nextPulseTime)
+        // Check if it's time for a new pulse
+        if (currentPosition >= nextPulseTime && !pulseActive)
         {
-            generatePulse(midiMessages, sample);
+            pulseActive = true;
+            currentPulsePosition = 0;
             nextPulseTime += pulseInterval;
+        }
+
+        // Generate audio for active pulse
+        if (pulseActive)
+        {
+            float pulseSample = generatePulseSample(currentPulsePosition);
+            
+            // Add to all output channels
+            for (int channel = 0; channel < audioBuffer.getNumChannels(); ++channel)
+            {
+                audioBuffer.addSample(channel, sample, pulseSample);
+            }
+
+            currentPulsePosition++;
+            
+            // Check if pulse is finished
+            if (currentPulsePosition >= pulseDurationSamples)
+            {
+                pulseActive = false;
+                currentPulsePosition = 0;
+            }
         }
 
         currentPosition += 1.0;
@@ -65,15 +92,32 @@ void PulseGenerator::updatePulseRate()
         pulseInterval = sampleRate; // Fallback to 1 pulse per second
 }
 
-void PulseGenerator::generatePulse(juce::MidiBuffer& midiMessages, int samplePosition)
+void PulseGenerator::generateAudioPulse(juce::AudioBuffer<float>& audioBuffer, int startSample, int numSamples)
 {
-    // Create MIDI note on message
-    juce::MidiMessage noteOn = juce::MidiMessage::noteOn(pulseChannel, 60, pulseVelocity);
-    noteOn.setTimeStamp(samplePosition);
-    midiMessages.addEvent(noteOn, samplePosition);
+    // This method is kept for potential future use but not currently called
+    juce::ignoreUnused(audioBuffer, startSample, numSamples);
+}
 
-    // Create MIDI note off message (very short note)
-    juce::MidiMessage noteOff = juce::MidiMessage::noteOff(pulseChannel, 60);
-    noteOff.setTimeStamp(samplePosition + 1);
-    midiMessages.addEvent(noteOff, samplePosition + 1);
+float PulseGenerator::generatePulseSample(int sampleIndex)
+{
+    if (sampleIndex >= pulseDurationSamples)
+        return 0.0f;
+
+    // Generate sine wave
+    float phase = (2.0f * juce::MathConstants<float>::pi * PULSE_FREQUENCY * sampleIndex) / static_cast<float>(sampleRate);
+    float sineWave = std::sin(phase);
+
+    // Apply envelope (quick attack, exponential decay)
+    float envelope = 1.0f;
+    if (sampleIndex < pulseDurationSamples * 0.1f) // 10% attack
+    {
+        envelope = static_cast<float>(sampleIndex) / (pulseDurationSamples * 0.1f);
+    }
+    else // 90% decay
+    {
+        float decayPosition = (sampleIndex - pulseDurationSamples * 0.1f) / (pulseDurationSamples * 0.9f);
+        envelope = std::exp(-5.0f * decayPosition); // Exponential decay
+    }
+
+    return sineWave * envelope * pulseVelocity * 0.1f; // Scale down to prevent clipping
 }

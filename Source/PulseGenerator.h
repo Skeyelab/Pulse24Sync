@@ -11,12 +11,12 @@ public:
     void prepare(double sampleRate);
     void reset();
 
-    void process(int numSamples, double sampleRate, juce::MidiBuffer& midiMessages);
+    void process(int numSamples, double sampleRate, juce::AudioBuffer<float>& audioBuffer);
 
     // Parameter setters
     void setEnabled(bool enabled) { isEnabled = enabled; }
-    void setPulseVelocity(float velocity) { pulseVelocity = static_cast<juce::uint8>(velocity); }
-    void setPulseChannel(int channel) { pulseChannel = channel; }
+    void setPulseVelocity(float velocity) { pulseVelocity = juce::jlimit(0.0f, 1.0f, velocity / 127.0f); } // Convert MIDI velocity to gain
+    void setPulseChannel(int channel) { pulseChannel = channel; } // Keep for compatibility but not used for audio
     void setSyncToHost(bool sync) { syncToHost = sync; }
     void setManualBPM(float bpm) { manualBPM = bpm; }
 
@@ -27,7 +27,7 @@ public:
 
     // Getters for UI
     bool getEnabled() const { return isEnabled; }
-    float getPulseVelocity() const { return static_cast<float>(pulseVelocity); }
+    float getPulseVelocity() const { return pulseVelocity * 127.0f; } // Convert back to MIDI scale for UI
     int getPulseChannel() const { return pulseChannel; }
     bool getSyncToHost() const { return syncToHost; }
     float getManualBPM() const { return manualBPM; }
@@ -37,8 +37,8 @@ public:
 private:
     // Parameters
     bool isEnabled = true;
-    juce::uint8 pulseVelocity = 100;
-    int pulseChannel = 1;
+    float pulseVelocity = 100.0f / 127.0f; // Store as gain (0.0 to 1.0)
+    int pulseChannel = 1; // Keep for compatibility
     bool syncToHost = true;
     float manualBPM = 120.0f;
 
@@ -54,11 +54,18 @@ private:
     double currentPosition = 0.0;  // current position in samples
     double nextPulseTime = 0.0;  // time of next pulse in samples
 
+    // Audio generation
+    int pulseDurationSamples = 1000; // Duration of each pulse in samples (about 22ms at 44.1kHz)
+    int currentPulsePosition = 0; // Current position within a pulse
+    bool pulseActive = false; // Whether we're currently generating a pulse
+
     // Constants
     static constexpr int PULSES_PER_QUARTER_NOTE = 24;
     static constexpr double SECONDS_PER_MINUTE = 60.0;
+    static constexpr float PULSE_FREQUENCY = 1000.0f; // 1kHz sine wave for pulses
 
     // Helper methods
     void updatePulseRate();
-    void generatePulse(juce::MidiBuffer& midiMessages, int samplePosition);
+    void generateAudioPulse(juce::AudioBuffer<float>& audioBuffer, int startSample, int numSamples);
+    float generatePulseSample(int sampleIndex);
 };

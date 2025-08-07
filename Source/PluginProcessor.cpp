@@ -103,9 +103,8 @@ void Pulse24SyncAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     auto totalNumInputChannels = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // Clear any output channels that don't have input data
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear(i, 0, buffer.getNumSamples());
+    // Clear the output buffer first (we want to generate audio, not pass through input)
+    buffer.clear();
 
     // Update pulse generator parameters
     pulseGenerator.setEnabled(*parameters.getRawParameterValue("enabled"));
@@ -127,8 +126,11 @@ void Pulse24SyncAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
         }
     }
 
-    // Process pulses and generate MIDI
-    pulseGenerator.process(buffer.getNumSamples(), getSampleRate(), midiMessages);
+    // Process pulses and generate audio
+    pulseGenerator.process(buffer.getNumSamples(), getSampleRate(), buffer);
+    
+    // Clear MIDI messages as we're not using them anymore
+    midiMessages.clear();
 }
 
 bool Pulse24SyncAudioProcessor::hasEditor() const
