@@ -250,7 +250,6 @@ jobs:
           build-essential \
           cmake \
           ninja-build \
-          gcov \
           lcov \
           libasound2-dev \
           libjack-jackd2-dev \
