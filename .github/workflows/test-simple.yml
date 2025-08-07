@@ -13,7 +13,7 @@ env:
 jobs:
   test-ubuntu:
     name: Test Ubuntu
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout
@@ -127,7 +127,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-24.04, macOS, Windows]
+        os: [ubuntu-latest, macOS, Windows]
     
     steps:
     - name: Checkout
@@ -136,7 +136,7 @@ jobs:
         submodules: recursive
 
     - name: Install dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu-24.04'
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get install -y \

@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS, Windows, ubuntu-24.04]
+        os: [macOS, Windows, ubuntu-latest]
         include:
           - os: macOS
             artifact-name: macos-builds
@@ -23,7 +23,7 @@ jobs:
             build-path: |
               Builds/VisualStudio2022/x64/Release/VST3/Pulse24Sync.vst3/
               Builds/VisualStudio2022/x64/Release/Standalone Plugin/Pulse24Sync.exe
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
             artifact-name: linux-builds
             build-path: |
               build/Pulse24Sync_artefacts/Release/VST3/Pulse24Sync.vst3
@@ -161,7 +161,7 @@ jobs:
           Write-Host "Project files generated successfully"
 
       - name: Cache Linux dependencies
-        if: matrix.os == 'ubuntu-24.04'
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/cache@v4
         with:
           path: /var/cache/apt/archives
@@ -170,7 +170,7 @@ jobs:
             ${{ runner.os }}-dependencies-
 
       - name: Install Linux dependencies
-        if: matrix.os == 'ubuntu-24.04'
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -248,7 +248,7 @@ jobs:
           Get-ChildItem -Path . -Recurse -Name ".vs" -Directory | ForEach-Object { Remove-Item -Path $_ -Recurse -Force -ErrorAction SilentlyContinue }
 
       - name: Build Linux Plugin
-        if: matrix.os == 'ubuntu-24.04'
+        if: matrix.os == 'ubuntu-latest'
         run: |
           echo "Building Pulse24Sync VST Plugin for Linux..."
           chmod +x build.sh
@@ -281,7 +281,7 @@ jobs:
           }
 
       - name: Show build status (Linux)
-        if: matrix.os == 'ubuntu-24.04'
+        if: matrix.os == 'ubuntu-latest'
         run: |
           echo "🔨 Built from source using pre-installed build tools"
           echo "📦 Linux artifacts:"
@@ -357,7 +357,7 @@ jobs:
           }
 
       - name: Validate build artifacts (Linux)
-        if: matrix.os == 'ubuntu-24.04'
+        if: matrix.os == 'ubuntu-latest'
         run: |
           echo "🔍 Validating build artifacts..."
           artifacts_found=false

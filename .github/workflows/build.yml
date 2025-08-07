@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: true  # Enabled for Linux builds
     steps:
       - name: Checkout code
