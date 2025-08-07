@@ -115,11 +115,14 @@ void Pulse24SyncAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
 
     // Get host tempo information
     juce::AudioPlayHead* playHead = getPlayHead();
+    bool hasValidPlayHead = false;
+    
     if (playHead != nullptr)
     {
         auto posInfo = playHead->getPosition();
         if (posInfo.hasValue())
         {
+            hasValidPlayHead = true;
             // Get BPM and update it
             double currentBPM = posInfo->getBpm().orFallback(120.0);
             pulseGenerator.setHostTempo(currentBPM);
@@ -134,20 +137,22 @@ void Pulse24SyncAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
             double ppqPosition = posInfo->getPpqPosition().orFallback(0.0);
             pulseGenerator.setHostPPQPosition(ppqPosition);
         }
-        else
-        {
-            // Fallback if position info not available
-            pulseGenerator.setHostTempo(120.0);
-            pulseGenerator.setHostIsPlaying(false);
-            pulseGenerator.setHostPosition(0.0);
-            pulseGenerator.setHostPPQPosition(0.0);
-        }
     }
-    else
+    
+    if (!hasValidPlayHead)
     {
-        // Fallback if playhead not available
+        // No valid playhead - likely running in standalone mode
+        // In standalone mode, we should always be "playing" unless sync to host is enabled
+        // and we specifically want to wait for host transport
         pulseGenerator.setHostTempo(120.0);
-        pulseGenerator.setHostIsPlaying(false);
+        
+        // In standalone mode, default to playing state so audio is generated
+        // Users can still disable via the "enabled" parameter if needed
+        bool shouldPlay = true;
+        
+        // If sync to host is enabled but no host is available, we might want to fall back to manual mode
+        // However, for standalone apps, it's better to just assume we're always playing
+        pulseGenerator.setHostIsPlaying(shouldPlay);
         pulseGenerator.setHostPosition(0.0);
         pulseGenerator.setHostPPQPosition(0.0);
     }

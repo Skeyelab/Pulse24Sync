@@ -26,7 +26,12 @@ void PulseGenerator::reset()
 
 void PulseGenerator::process(int numSamples, double currentSampleRate, juce::AudioBuffer<float>& audioBuffer)
 {
-    if (!isEnabled || !hostIsPlaying)
+    if (!isEnabled)
+        return;
+    
+    // In standalone mode or when not syncing to host, we should always generate audio when enabled
+    // Only skip if we're syncing to host AND the host is not playing
+    if (syncToHost && !hostIsPlaying)
         return;
 
     // Update sample rate if it changed
