@@ -1,35 +1,17 @@
 cmake_minimum_required(VERSION 3.15)
 
-# Test executable
-add_executable(Pulse24SyncTests
-    TestMain.cpp
-    PulseGeneratorTests.cpp
-    PluginProcessorTests.cpp
-    TestUtils.cpp
+# Create a console application for tests using JUCE
+juce_add_console_app(Pulse24SyncTests
+    PRODUCT_NAME "Pulse24Sync Tests"
 )
 
-# Link against the main plugin target and JUCE
-target_link_libraries(Pulse24SyncTests
-    PRIVATE
-        juce::juce_audio_utils
-        juce::juce_audio_processors
-        juce::juce_audio_basics
-        juce::juce_core
-        juce::juce_data_structures
-        juce::juce_events
-    PUBLIC
-        juce::juce_recommended_config_flags
-)
-
-# Include source directory for testing
-target_include_directories(Pulse24SyncTests 
-    PRIVATE 
-        ../Source
-)
-
-# Add source files that we want to test
+# Add test source files
 target_sources(Pulse24SyncTests
     PRIVATE
+        TestMain.cpp
+        PulseGeneratorTests.cpp
+        PluginProcessorTests.cpp
+        TestUtils.cpp
         ../Source/PulseGenerator.cpp
         # Note: We don't include PluginProcessor.cpp directly as it has JUCE plugin-specific code
 )
@@ -41,10 +23,30 @@ target_compile_definitions(Pulse24SyncTests
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
         JUCE_UNIT_TESTS=1
+        JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:Pulse24SyncTests,JUCE_PRODUCT_NAME>"
+        JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:Pulse24SyncTests,JUCE_VERSION>"
 )
 
-# Generate JuceHeader for tests
-juce_generate_juce_header(Pulse24SyncTests)
+# Include source directory for testing
+target_include_directories(Pulse24SyncTests 
+    PRIVATE 
+        ../Source
+)
+
+# Link JUCE modules
+target_link_libraries(Pulse24SyncTests
+    PRIVATE
+        juce::juce_audio_utils
+        juce::juce_audio_processors
+        juce::juce_audio_basics
+        juce::juce_core
+        juce::juce_data_structures
+        juce::juce_events
+    PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_lto_flags
+        juce::juce_recommended_warning_flags
+)
 
 # Enable testing
 enable_testing()
