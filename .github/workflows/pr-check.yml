@@ -1,0 +1,182 @@
+name: PR Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  quick-test:
+    name: Quick Test (Ubuntu)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          libasound2-dev \
+          libjack-jackd2-dev \
+          libfreetype6-dev \
+          libx11-dev \
+          libxcomposite-dev \
+          libxcursor-dev \
+          libxext-dev \
+          libxinerama-dev \
+          libxrandr-dev \
+          libxrender-dev \
+          libgl1-mesa-dev \
+          libglu1-mesa-dev \
+          libcurl4-openssl-dev
+
+    - name: Cache JUCE
+      uses: actions/cache@v3
+      with:
+        path: |
+          build-tests/_deps
+          ~/.cmake
+        key: ubuntu-juce-pr-${{ hashFiles('CMakeLists.txt') }}
+        restore-keys: |
+          ubuntu-juce-pr-
+          ubuntu-juce-
+
+    - name: Configure CMake
+      run: |
+        cmake -B build-tests \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DPULSE24SYNC_BUILD_TESTS=ON \
+          -G Ninja
+
+    - name: Build tests
+      run: cmake --build build-tests --config ${{ env.BUILD_TYPE }} --parallel
+
+    - name: Run tests
+      working-directory: build-tests
+      run: |
+        ./tests/Pulse24SyncTests --verbose
+        ctest --output-on-failure --build-config ${{ env.BUILD_TYPE }}
+
+    - name: Comment test results
+      if: always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          let testResults = '';
+          try {
+            testResults = fs.readFileSync('build-tests/tests/test_results.log', 'utf8');
+          } catch (error) {
+            testResults = 'Test log not found or test execution failed.';
+          }
+          
+          const { context } = github;
+          const success = '${{ job.status }}' === 'success';
+          const icon = success ? '✅' : '❌';
+          const status = success ? 'PASSED' : 'FAILED';
+          
+          const body = `## ${icon} PR Test Results: ${status}
+          
+          **Platform:** Ubuntu Latest
+          **Build Type:** Release
+          
+          <details>
+          <summary>Test Log</summary>
+          
+          \`\`\`
+          ${testResults.slice(-2000)}  // Last 2000 chars
+          \`\`\`
+          
+          </details>
+          
+          ${success ? 'All tests passed! 🎉' : 'Some tests failed. Please check the logs above.'}`;
+          
+          // Find existing comment
+          const comments = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const existingComment = comments.data.find(comment => 
+            comment.user.type === 'Bot' && comment.body.includes('PR Test Results')
+          );
+          
+          if (existingComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existingComment.id,
+              body: body
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+          }
+
+  build-check:
+    name: Build Check
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          libasound2-dev \
+          libjack-jackd2-dev \
+          libfreetype6-dev \
+          libx11-dev \
+          libxcomposite-dev \
+          libxcursor-dev \
+          libxext-dev \
+          libxinerama-dev \
+          libxrandr-dev \
+          libxrender-dev \
+          libgl1-mesa-dev \
+          libglu1-mesa-dev \
+          libcurl4-openssl-dev
+
+    - name: Install dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        # macOS dependencies are mostly built-in
+        echo "No additional dependencies needed for macOS"
+
+    - name: Setup build environment (Windows)
+      if: matrix.os == 'windows-latest'
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Configure CMake
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DPULSE24SYNC_BUILD_TESTS=OFF
+
+    - name: Build plugin
+      run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel

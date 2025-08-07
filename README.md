@@ -1,4 +1,6 @@
 [![Build Pulse24Sync](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/build.yml/badge.svg)](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/build.yml)
+[![Tests](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/test.yml/badge.svg)](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/test.yml)
+[![PR Check](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/pr-check.yml/badge.svg)](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/pr-check.yml)
 
 # Pulse24Sync VST Plugin
 
@@ -17,12 +19,52 @@ A VST3 plugin that generates precisely 24 MIDI pulses per quarter note, with rea
   - Manual BPM setting (60-200 BPM)
 - **Real-time Status Display**: Shows current BPM, sync status, and pulse rate
 - **VST3 Format**: Compatible with all major DAWs
+- **Comprehensive Testing**: Full test suite with automated CI/CD
 
 ## Build Requirements
 
 - **CMake** 3.15 or higher
 - **C++17** compatible compiler
 - **JUCE Framework** (will be downloaded automatically)
+
+## Testing
+
+Pulse24Sync includes a comprehensive test suite to ensure code quality and prevent regressions.
+
+### Running Tests
+
+```bash
+# Run all tests
+./run-tests.sh
+
+# Run with verbose output
+./run-tests.sh --verbose
+
+# Run specific test categories
+./run-tests.sh --category=Core
+
+# Clean build and run in debug mode
+./run-tests.sh --clean --debug
+```
+
+### Test Coverage
+
+- **Core Logic**: PulseGenerator functionality, timing accuracy, MIDI generation
+- **Plugin Interface**: Parameter management, state persistence, host integration  
+- **Edge Cases**: Boundary conditions, error handling, performance validation
+- **Multi-platform**: Automated testing on Ubuntu, macOS, and Windows
+
+### Continuous Integration
+
+The project uses GitHub Actions for automated testing:
+
+- ✅ **Multi-platform testing** on every push and PR
+- ✅ **Sanitizer testing** (AddressSanitizer, UndefinedBehaviorSanitizer)
+- ✅ **Code coverage** reporting
+- ✅ **Dependency caching** for faster builds
+- ✅ **Automatic PR comments** with test results
+
+For detailed testing information, see [docs/TESTING.md](docs/TESTING.md).
 
 ## Building the Plugin
 

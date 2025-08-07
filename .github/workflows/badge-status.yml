@@ -1,0 +1,105 @@
+name: Test Status Badge
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '0 12 * * *'  # Daily at noon UTC
+  workflow_dispatch:
+
+jobs:
+  test-status:
+    name: Generate Test Status Badge
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          libasound2-dev \
+          libjack-jackd2-dev \
+          libfreetype6-dev \
+          libx11-dev \
+          libxcomposite-dev \
+          libxcursor-dev \
+          libxext-dev \
+          libxinerama-dev \
+          libxrandr-dev \
+          libxrender-dev \
+          libgl1-mesa-dev \
+          libglu1-mesa-dev \
+          libcurl4-openssl-dev
+
+    - name: Cache JUCE
+      uses: actions/cache@v3
+      with:
+        path: |
+          build-tests/_deps
+          ~/.cmake
+        key: ubuntu-juce-badge-${{ hashFiles('CMakeLists.txt') }}
+        restore-keys: |
+          ubuntu-juce-badge-
+          ubuntu-juce-
+
+    - name: Configure CMake
+      run: |
+        cmake -B build-tests \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DPULSE24SYNC_BUILD_TESTS=ON \
+          -G Ninja
+
+    - name: Build tests
+      run: cmake --build build-tests --config Release --parallel
+
+    - name: Run tests and capture results
+      id: test_results
+      run: |
+        cd build-tests
+        set +e  # Don't exit on test failure
+        ./tests/Pulse24SyncTests --verbose > test_output.log 2>&1
+        TEST_EXIT_CODE=$?
+        ctest --output-on-failure >> test_output.log 2>&1
+        
+        if [ $TEST_EXIT_CODE -eq 0 ]; then
+          echo "status=passing" >> $GITHUB_OUTPUT
+          echo "color=brightgreen" >> $GITHUB_OUTPUT
+        else
+          echo "status=failing" >> $GITHUB_OUTPUT
+          echo "color=red" >> $GITHUB_OUTPUT
+        fi
+        
+        # Count total tests and failures
+        TOTAL_TESTS=$(grep -c "Test:" test_output.log || echo "0")
+        FAILED_TESTS=$(grep -c "FAILED" test_output.log || echo "0")
+        
+        echo "total_tests=$TOTAL_TESTS" >> $GITHUB_OUTPUT
+        echo "failed_tests=$FAILED_TESTS" >> $GITHUB_OUTPUT
+
+    - name: Create test badge
+      uses: schneegans/dynamic-badges-action@v1.6.0
+      with:
+        auth: ${{ secrets.GITHUB_TOKEN }}
+        gistID: ${{ secrets.BADGE_GIST_ID }}
+        filename: pulse24sync-tests.json
+        label: tests
+        message: ${{ steps.test_results.outputs.status }}
+        color: ${{ steps.test_results.outputs.color }}
+
+    - name: Create coverage badge (placeholder)
+      uses: schneegans/dynamic-badges-action@v1.6.0
+      with:
+        auth: ${{ secrets.GITHUB_TOKEN }}
+        gistID: ${{ secrets.BADGE_GIST_ID }}
+        filename: pulse24sync-coverage.json
+        label: coverage
+        message: "unknown"
+        color: lightgrey

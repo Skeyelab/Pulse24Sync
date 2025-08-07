@@ -341,30 +341,54 @@ cmake .. -DPULSE24SYNC_BUILD_TESTS=OFF
 make
 ```
 
-### GitHub Actions (Future)
+### GitHub Actions
 
-The project can be configured to run tests automatically on:
+The project includes comprehensive GitHub Actions workflows for automated testing:
 
-- Pull requests
-- Main branch pushes
-- Release tags
-- Nightly builds
+#### **Main Test Workflow** (`.github/workflows/test.yml`)
+Runs on every push and pull request:
 
-Example workflow configuration:
+- **Multi-platform testing**: Ubuntu, macOS, Windows
+- **Multiple build configurations**: Release, Debug, RelWithDebInfo
+- **Sanitizer testing**: AddressSanitizer, UndefinedBehaviorSanitizer  
+- **Code coverage**: Automatic coverage reporting with Codecov
+- **Dependency caching**: JUCE downloads are cached for faster builds
 
-```yaml
-name: Test Suite
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install dependencies
-        run: sudo apt-get install -y cmake build-essential libasound2-dev
-      - name: Run tests
-        run: ./run-tests.sh --verbose
-```
+#### **PR Check Workflow** (`.github/workflows/pr-check.yml`)
+Fast validation for pull requests:
+
+- **Quick test run**: Ubuntu-only for fast feedback
+- **Build verification**: Ensures plugin builds on all platforms
+- **Automatic comments**: Test results posted directly to PR
+
+#### **Badge Status Workflow** (`.github/workflows/badge-status.yml`)
+Generates status badges:
+
+- **Daily updates**: Test status badges updated automatically
+- **Real-time status**: Shows current test passing/failing status
+- **Coverage tracking**: Coverage percentage badges (when enabled)
+
+#### **Workflow Features**
+
+- ✅ **Parallel execution**: Multiple jobs run simultaneously
+- ✅ **Artifact upload**: Test logs saved on failure
+- ✅ **Cache optimization**: Dependencies cached between runs
+- ✅ **Matrix testing**: Multiple OS/compiler combinations
+- ✅ **Failure isolation**: Individual job failures don't cancel others
+- ✅ **Manual triggering**: All workflows can be triggered manually
+
+#### **Setting Up Badges**
+
+To enable status badges in your README:
+
+1. **Create a secret gist** for badge data storage
+2. **Add repository secrets**:
+   - `BADGE_GIST_ID`: Your gist ID for badge storage
+3. **Add badges to README**:
+   ```markdown
+   ![Tests](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/USERNAME/GIST_ID/raw/pulse24sync-tests.json)
+   ![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/USERNAME/GIST_ID/raw/pulse24sync-coverage.json)
+   ```
 
 ## Troubleshooting
 
