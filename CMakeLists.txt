@@ -126,3 +126,11 @@ if(UNIX AND NOT APPLE)
         ${CURL_CFLAGS_OTHER}
     )
 endif()
+
+# Testing configuration
+option(PULSE24SYNC_BUILD_TESTS "Build tests for Pulse24Sync" ON)
+
+if(PULSE24SYNC_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

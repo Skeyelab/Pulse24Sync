@@ -57,7 +57,7 @@ cd build
 
 # Configure with CMake
 echo "⚙️  Configuring project with CMake..."
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Release -DPULSE24SYNC_BUILD_TESTS=OFF
 
 # Build the project
 echo "🔨 Building project..."
