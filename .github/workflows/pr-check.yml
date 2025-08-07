@@ -133,6 +133,15 @@ jobs:
         os: [ubuntu-latest, macOS, Windows]
     
     steps:
+    - name: Setup Git (Windows)
+      if: matrix.os == 'Windows'
+      run: |
+        # Ensure Git is available and properly configured for Windows
+        git --version
+        git config --global core.autocrlf false
+        git config --global core.longpaths true
+      shell: bash
+        
     - name: Checkout code
       uses: actions/checkout@v4
       with:
