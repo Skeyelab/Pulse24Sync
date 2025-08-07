@@ -10,7 +10,7 @@ Pulse24SyncAudioProcessor::Pulse24SyncAudioProcessor()
             std::make_unique<juce::AudioParameterBool>("enabled", "Enabled", true),
             std::make_unique<juce::AudioParameterFloat>("pulseVelocity", "Pulse Velocity", 0.0f, 127.0f, 100.0f),
             std::make_unique<juce::AudioParameterInt>("pulseChannel", "Pulse Channel", 1, 16, 1),
-            std::make_unique<juce::AudioParameterBool>("syncToHost", "Sync to Host", true),
+            std::make_unique<juce::AudioParameterBool>("syncToHost", "Sync to Host", false),
             std::make_unique<juce::AudioParameterFloat>("manualBPM", "Manual BPM", 60.0f, 200.0f, 120.0f)
         })
 {
