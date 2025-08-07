@@ -19,6 +19,8 @@ void PulseGenerator::reset()
     nextPulseTime = 0.0;
     currentPulsePosition = 0;
     pulseActive = false;
+    lastHostBPM = hostBPM;
+    lastPPQPosition = 0.0;
     updatePulseRate();
 }
 
@@ -35,8 +37,12 @@ void PulseGenerator::process(int numSamples, double currentSampleRate, juce::Aud
         updatePulseRate();
     }
 
-    // Update pulse rate if tempo changed
-    updatePulseRate();
+    // Detect and handle tempo changes
+    if (detectTempoChange())
+    {
+        resyncTiming();
+        updatePulseRate();
+    }
 
     // Process each sample
     for (int sample = 0; sample < numSamples; ++sample)
@@ -78,18 +84,88 @@ void PulseGenerator::updatePulseRate()
 {
     double currentBPM = syncToHost ? hostBPM : manualBPM;
 
-    // Calculate pulses per second: (BPM / 60) * 4 * 24
-    // BPM/60 = beats per second
-    // * 4 = quarter notes per second (assuming 4/4 time)
-    // * 24 = pulses per quarter note
-    pulseRate = (currentBPM / SECONDS_PER_MINUTE) * 4.0 * PULSES_PER_QUARTER_NOTE;
+    // Ensure BPM is valid
+    if (currentBPM <= 0.0)
+        currentBPM = 120.0;
+
+    // Calculate pulses per second correctly
+    // BPM = beats per minute
+    // For 24 PPQN (pulses per quarter note):
+    // pulses per second = (BPM / 60) * 24
+    pulseRate = (currentBPM / SECONDS_PER_MINUTE) * PULSES_PER_QUARTER_NOTE;
 
     // Calculate samples between pulses
     pulseInterval = sampleRate / pulseRate;
+    samplesPerPulse = pulseInterval;
 
     // Ensure we don't have negative or zero intervals
     if (pulseInterval <= 0.0)
         pulseInterval = sampleRate; // Fallback to 1 pulse per second
+}
+
+bool PulseGenerator::detectTempoChange()
+{
+    // Check if we're in sync mode and tempo has changed
+    if (syncToHost)
+    {
+        // Detect significant tempo change
+        if (std::abs(hostBPM - lastHostBPM) > TEMPO_CHANGE_THRESHOLD)
+        {
+            return true;
+        }
+        
+        // Also check for PPQ position jumps (e.g., when transport is repositioned)
+        if (hostPPQPosition > 0.0 && lastPPQPosition > 0.0)
+        {
+            double expectedPPQAdvance = (hostPPQPosition - lastPPQPosition);
+            // If PPQ jumped more than expected (transport repositioned)
+            if (std::abs(expectedPPQAdvance) > 1.0)
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void PulseGenerator::resyncTiming()
+{
+    // When tempo changes or transport jumps, resync our timing
+    if (syncToHost && hostPPQPosition > 0.0)
+    {
+        // Calculate which pulse we should be on based on PPQ position
+        double pulsesElapsed = hostPPQPosition * PULSES_PER_QUARTER_NOTE;
+        double wholePulses = std::floor(pulsesElapsed);
+        double fractionalPulse = pulsesElapsed - wholePulses;
+        
+        // Reset position to align with current pulse
+        currentPosition = fractionalPulse * pulseInterval;
+        nextPulseTime = pulseInterval;
+        
+        // If we're in the middle of a pulse, adjust accordingly
+        if (fractionalPulse < (pulseDurationSamples / pulseInterval))
+        {
+            pulseActive = true;
+            currentPulsePosition = static_cast<int>(fractionalPulse * pulseInterval);
+        }
+        else
+        {
+            pulseActive = false;
+            currentPulsePosition = 0;
+        }
+    }
+    else
+    {
+        // For manual mode or when PPQ not available, just reset timing
+        currentPosition = 0.0;
+        nextPulseTime = 0.0;
+        pulseActive = false;
+        currentPulsePosition = 0;
+    }
+    
+    // Update last known values
+    lastHostBPM = hostBPM;
+    lastPPQPosition = hostPPQPosition;
 }
 
 void PulseGenerator::generateAudioPulse(juce::AudioBuffer<float>& audioBuffer, int startSample, int numSamples)
