@@ -24,6 +24,7 @@ public:
     void setHostTempo(double bpm) { hostBPM = bpm; }
     void setHostIsPlaying(bool playing) { hostIsPlaying = playing; }
     void setHostPosition(double timeInSeconds) { hostPosition = timeInSeconds; }
+    void setHostPPQPosition(double ppq) { hostPPQPosition = ppq; }  // Add PPQ position setter
 
     // Getters for UI
     bool getEnabled() const { return isEnabled; }
@@ -46,6 +47,9 @@ private:
     double hostBPM = 120.0;
     bool hostIsPlaying = false;
     double hostPosition = 0.0;
+    double hostPPQPosition = 0.0;  // PPQ position from DAW
+    double lastHostBPM = 120.0;    // Track tempo changes
+    double lastPPQPosition = 0.0;  // Track PPQ position for sync
 
     // Timing
     double sampleRate = 44100.0;
@@ -53,6 +57,8 @@ private:
     double pulseInterval = 0.0;  // samples between pulses
     double currentPosition = 0.0;  // current position in samples
     double nextPulseTime = 0.0;  // time of next pulse in samples
+    double pulsesPerQuarterNote = 24.0;  // Standard MIDI clock rate
+    double samplesPerPulse = 0.0;  // Samples per pulse at current tempo
 
     // Audio generation
     int pulseDurationSamples = 1000; // Duration of each pulse in samples (about 22ms at 44.1kHz)
@@ -63,9 +69,12 @@ private:
     static constexpr int PULSES_PER_QUARTER_NOTE = 24;
     static constexpr double SECONDS_PER_MINUTE = 60.0;
     static constexpr float PULSE_FREQUENCY = 1000.0f; // 1kHz sine wave for pulses
+    static constexpr double TEMPO_CHANGE_THRESHOLD = 0.1; // Detect tempo changes > 0.1 BPM
 
     // Helper methods
     void updatePulseRate();
     void generateAudioPulse(juce::AudioBuffer<float>& audioBuffer, int startSample, int numSamples);
     float generatePulseSample(int sampleIndex);
+    bool detectTempoChange();  // Detect if tempo has changed
+    void resyncTiming();       // Resynchronize timing when tempo changes
 };
