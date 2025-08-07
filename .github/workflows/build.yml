@@ -163,6 +163,84 @@ jobs:
 
           echo "Build completed successfully"
 
+      - name: Code Sign macOS Plugin
+        run: |
+          echo "🔐 Checking code signing configuration..."
+
+          # Function to sign a bundle with proper entitlements
+          sign_bundle() {
+              local bundle_path="$1"
+              local bundle_name=$(basename "$bundle_path")
+              
+              if [ -z "$CODE_SIGN_IDENTITY" ]; then
+                  echo "  ⚠️  Skipping code signing for $bundle_name (no signing identity set)"
+                  return 0
+              fi
+              
+              echo "  🔏 Code signing $bundle_name..."
+              
+              # Sign with entitlements and hardened runtime
+              codesign --force --options runtime --entitlements entitlements.plist \
+                  --sign "$CODE_SIGN_IDENTITY" --timestamp "$bundle_path"
+              
+              if [ $? -eq 0 ]; then
+                  echo "  ✅ Successfully signed $bundle_name"
+                  
+                  # Verify the signature
+                  echo "  🔍 Verifying signature..."
+                  codesign --verify --deep --strict "$bundle_path"
+                  if [ $? -eq 0 ]; then
+                      echo "  ✅ Signature verification passed"
+                  else
+                      echo "  ⚠️  Signature verification failed"
+                  fi
+              else
+                  echo "  ❌ Failed to sign $bundle_name"
+                  return 1
+              fi
+          }
+
+          # Look for signing identity (can be set via environment variable or detected)
+          if [ -z "$CODE_SIGN_IDENTITY" ]; then
+              # Try to detect Apple Developer certificates
+              AVAILABLE_IDENTITIES=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1)
+              if [ ! -z "$AVAILABLE_IDENTITIES" ]; then
+                  # Extract the identity from the security output
+                  CODE_SIGN_IDENTITY=$(echo "$AVAILABLE_IDENTITIES" | sed -n 's/.*"\(.*\)"/\1/p')
+                  echo "  🔍 Auto-detected signing identity: $CODE_SIGN_IDENTITY"
+              else
+                  echo "  ⚠️  No Developer ID Application certificate found"
+                  echo "  ℹ️  Plugins will be built unsigned (may trigger security warnings)"
+              fi
+          else
+              echo "  ✅ Using specified signing identity: $CODE_SIGN_IDENTITY"
+          fi
+
+          # Check for entitlements file
+          if [ ! -f "entitlements.plist" ]; then
+              echo "  ⚠️  entitlements.plist not found - code signing may fail"
+          else
+              echo "  ✅ Found entitlements.plist"
+          fi
+
+          # Sign VST3 plugin
+          if [ -d "Builds/MacOSX/build/Release/Pulse24Sync.vst3" ]; then
+              echo "  - Signing VST3 plugin..."
+              sign_bundle "Builds/MacOSX/build/Release/Pulse24Sync.vst3"
+          fi
+
+          # Sign AU component
+          if [ -d "Builds/MacOSX/build/Release/Pulse24Sync.component" ]; then
+              echo "  - Signing AU component..."
+              sign_bundle "Builds/MacOSX/build/Release/Pulse24Sync.component"
+          fi
+
+          # Sign standalone application
+          if [ -d "Builds/MacOSX/build/Release/Pulse24Sync.app" ]; then
+              echo "  - Signing standalone application..."
+              sign_bundle "Builds/MacOSX/build/Release/Pulse24Sync.app"
+          fi
+
       - name: Create clean distribution
         run: |
           echo "Creating clean distribution for macOS..."
