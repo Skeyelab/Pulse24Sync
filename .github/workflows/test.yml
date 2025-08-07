@@ -46,8 +46,8 @@ jobs:
           - os: macOS
             install_deps: |
               # macOS dependencies are mostly built-in
-              brew install ninja
-            generator: Ninja
+              echo "No additional dependencies needed for macOS"
+            generator: "Xcode"
             
           - os: Windows
             install_deps: |
