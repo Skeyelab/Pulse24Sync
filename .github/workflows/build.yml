@@ -81,6 +81,11 @@ jobs:
   build-macos:
     runs-on: macOS
     if: true  # Enabled for macOS builds
+    env:
+      CODE_SIGN_IDENTITY: ${{ secrets.CODE_SIGN_IDENTITY }}
+      DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -171,21 +176,21 @@ jobs:
           sign_bundle() {
               local bundle_path="$1"
               local bundle_name=$(basename "$bundle_path")
-              
+
               if [ -z "$CODE_SIGN_IDENTITY" ]; then
                   echo "  ⚠️  Skipping code signing for $bundle_name (no signing identity set)"
                   return 0
               fi
-              
+
               echo "  🔏 Code signing $bundle_name..."
-              
+
               # Sign with entitlements and hardened runtime
               codesign --force --options runtime --entitlements entitlements.plist \
                   --sign "$CODE_SIGN_IDENTITY" --timestamp "$bundle_path"
-              
+
               if [ $? -eq 0 ]; then
                   echo "  ✅ Successfully signed $bundle_name"
-                  
+
                   # Verify the signature
                   echo "  🔍 Verifying signature..."
                   codesign --verify --deep --strict "$bundle_path"
@@ -239,6 +244,92 @@ jobs:
           if [ -d "Builds/MacOSX/build/Release/Pulse24Sync.app" ]; then
               echo "  - Signing standalone application..."
               sign_bundle "Builds/MacOSX/build/Release/Pulse24Sync.app"
+          fi
+
+      - name: Notarize macOS Plugin
+        if: env.CODE_SIGN_IDENTITY != '' && env.APPLE_ID != '' && env.NOTARIZATION_PASSWORD != ''
+        run: |
+          echo "🍎 Starting notarization process..."
+
+          # Function to notarize a bundle
+          notarize_bundle() {
+              local bundle_path="$1"
+              local bundle_name=$(basename "$bundle_path")
+
+              echo "  📦 Creating zip for notarization: $bundle_name"
+
+              # Create a temporary directory for the zip
+              local temp_dir=$(mktemp -d)
+              local zip_path="$temp_dir/${bundle_name}.zip"
+
+              # Create zip file
+              cd "$(dirname "$bundle_path")"
+              zip -r "$zip_path" "$(basename "$bundle_path")"
+
+              echo "  🚀 Submitting $bundle_name for notarization..."
+
+              # Submit for notarization
+              local submission_id=$(xcrun notarytool submit "$zip_path" \
+                  --apple-id "$APPLE_ID" \
+                  --password "$NOTARIZATION_PASSWORD" \
+                  --team-id "$DEVELOPMENT_TEAM" \
+                  --wait 2>&1 | grep "id:" | cut -d' ' -f2)
+
+              if [ $? -eq 0 ] && [ ! -z "$submission_id" ]; then
+                  echo "  ✅ Notarization completed for $bundle_name (ID: $submission_id)"
+
+                  # Staple the notarization ticket
+                  echo "  📎 Stapling notarization ticket to $bundle_name..."
+                  xcrun stapler staple "$bundle_path"
+
+                  if [ $? -eq 0 ]; then
+                      echo "  ✅ Successfully stapled notarization to $bundle_name"
+
+                      # Verify notarization
+                      echo "  🔍 Verifying notarization..."
+                      xcrun stapler validate "$bundle_path"
+                      if [ $? -eq 0 ]; then
+                          echo "  ✅ Notarization verification passed for $bundle_name"
+                      else
+                          echo "  ⚠️  Notarization verification failed for $bundle_name"
+                      fi
+                  else
+                      echo "  ❌ Failed to staple notarization to $bundle_name"
+                  fi
+              else
+                  echo "  ❌ Notarization failed for $bundle_name"
+                  return 1
+              fi
+
+              # Clean up
+              rm -rf "$temp_dir"
+          }
+
+          # Check if we have the required environment variables
+          if [ -z "$APPLE_ID" ] || [ -z "$NOTARIZATION_PASSWORD" ] || [ -z "$DEVELOPMENT_TEAM" ]; then
+              echo "  ⚠️  Skipping notarization - missing required environment variables"
+              echo "  ℹ️  Set APPLE_ID, NOTARIZATION_PASSWORD, and DEVELOPMENT_TEAM to enable notarization"
+              return 0
+          fi
+
+          echo "  ✅ Notarization credentials available"
+
+          # Notarize VST3 plugin
+          if [ -d "Builds/MacOSX/build/Release/Pulse24Sync.vst3" ]; then
+              echo "  - Notarizing VST3 plugin..."
+              notarize_bundle "Builds/MacOSX/build/Release/Pulse24Sync.vst3"
+          fi
+
+          # Notarize AU component
+          if [ -d "Builds/MacOSX/build/Release/Pulse24Sync.component" ]; then
+              echo "  - Notarizing AU component..."
+              notarize_bundle "Builds/MacOSX/build/Release/Pulse24Sync.component"
+          fi
+
+          # Notarize standalone application
+          if [ -d "Builds/MacOSX/build/Release/Pulse24Sync.app" ]; then
+              echo "  - Notarizing standalone application..."
+              notarize_bundle "Builds/MacOSX/build/Release/Pulse24Sync.app"
           fi
 
       - name: Create clean distribution
