@@ -19,9 +19,9 @@ jobs:
     strategy:
       fail-fast: false  # Don't cancel other jobs if one fails
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, macOS, Windows]
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             install_deps: |
               sudo apt-get update
               sudo apt-get install -y \
@@ -43,13 +43,13 @@ jobs:
                 libcurl4-openssl-dev
             generator: Ninja
             
-          - os: macos-latest
+          - os: macOS
             install_deps: |
               # macOS dependencies are mostly built-in
               brew install ninja
             generator: Ninja
             
-          - os: windows-latest
+          - os: Windows
             install_deps: |
               # Windows dependencies handled by vcpkg or built-in
               echo "Using built-in Windows dependencies"
@@ -62,7 +62,7 @@ jobs:
         submodules: recursive
         
     - name: Setup build environment
-      if: matrix.os == 'windows-latest'
+      if: matrix.os == 'Windows'
       uses: microsoft/setup-msbuild@v1
 
     - name: Install dependencies
@@ -117,7 +117,7 @@ jobs:
   # Additional job for testing with different build configurations
   test-configurations:
     name: Test ${{ matrix.build_type }} on Ubuntu
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     
     strategy:
       matrix:
@@ -177,7 +177,7 @@ jobs:
   # Job for running tests with sanitizers (Linux only)
   test-sanitizers:
     name: Test with ${{ matrix.sanitizer }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     
     strategy:
       matrix:
@@ -228,7 +228,7 @@ jobs:
   # Job for code coverage (Linux only)
   coverage:
     name: Code Coverage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     
     steps:
     - name: Checkout code

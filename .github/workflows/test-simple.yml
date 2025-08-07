@@ -13,7 +13,7 @@ env:
 jobs:
   test-ubuntu:
     name: Test Ubuntu
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     
     steps:
     - name: Checkout
@@ -63,7 +63,7 @@ jobs:
 
   test-macos:
     name: Test macOS
-    runs-on: macos-latest
+    runs-on: macOS
     
     steps:
     - name: Checkout
@@ -93,7 +93,7 @@ jobs:
 
   test-windows:
     name: Test Windows
-    runs-on: windows-latest
+    runs-on: Windows
     
     steps:
     - name: Checkout
@@ -127,7 +127,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, macOS, Windows]
     
     steps:
     - name: Checkout
@@ -136,7 +136,7 @@ jobs:
         submodules: recursive
 
     - name: Install dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-24.04'
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -157,12 +157,12 @@ jobs:
           libcurl4-openssl-dev
 
     - name: Configure (Windows)
-      if: matrix.os == 'windows-latest'
+      if: matrix.os == 'Windows'
       run: |
         cmake -B build -A x64 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPULSE24SYNC_BUILD_TESTS=OFF
 
     - name: Configure (Unix)
-      if: matrix.os != 'windows-latest'
+      if: matrix.os != 'Windows'
       run: |
         cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPULSE24SYNC_BUILD_TESTS=OFF
       shell: bash

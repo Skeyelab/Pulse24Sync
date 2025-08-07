@@ -130,7 +130,7 @@ jobs:
     
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, macOS, Windows]
     
     steps:
     - name: Checkout code
@@ -139,7 +139,7 @@ jobs:
         submodules: recursive
 
     - name: Install dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-24.04'
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -160,13 +160,13 @@ jobs:
           libcurl4-openssl-dev
 
     - name: Install dependencies (macOS)
-      if: matrix.os == 'macos-latest'
+      if: matrix.os == 'macOS'
       run: |
         # macOS dependencies are mostly built-in
         echo "No additional dependencies needed for macOS"
 
     - name: Setup build environment (Windows)
-      if: matrix.os == 'windows-latest'
+      if: matrix.os == 'Windows'
       uses: microsoft/setup-msbuild@v1
 
     - name: Configure CMake
