@@ -48,10 +48,16 @@
   </MODULES>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"/>
   <EXPORTFORMATS>
-    <XCODE_MAC targetFolder="Builds/MacOSX">
+    <XCODE_MAC targetFolder="Builds/MacOSX" codeSigningIdentity=""
+               developmentTeamID="" customXcodeFlags="" macOSDeploymentTarget="10.12"
+               hardenedRuntimeEnabled="1" appSandboxEnabled="0">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="1" name="Debug" targetName="Pulse24Sync"/>
-        <CONFIGURATION isDebug="0" name="Release" targetName="Pulse24Sync"/>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="Pulse24Sync" osxCompatibility="10.12 SDK"
+                       useHeaderMap="0" codeSigningIdentity="" developmentTeamID=""
+                       customXcodeFlags="" hardenedRuntimeEnabled="1" appSandboxEnabled="0"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="Pulse24Sync" osxCompatibility="10.12 SDK"
+                       useHeaderMap="0" codeSigningIdentity="" developmentTeamID=""
+                       customXcodeFlags="" hardenedRuntimeEnabled="1" appSandboxEnabled="0"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_audio_basics" path="JUCE/modules"/>
