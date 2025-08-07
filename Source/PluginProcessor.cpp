@@ -9,7 +9,7 @@ Pulse24SyncAudioProcessor::Pulse24SyncAudioProcessor()
         {
             std::make_unique<juce::AudioParameterBool>("enabled", "Enabled", true),
             std::make_unique<juce::AudioParameterFloat>("pulseVelocity", "Pulse Velocity", 0.0f, 127.0f, 100.0f),
-            std::make_unique<juce::AudioParameterInt>("pulseChannel", "Pulse Channel", 1, 16, 1),
+            std::make_unique<juce::AudioParameterFloat>("pulseWidth", "Pulse Width", 1.0f, 50.0f, 22.0f), // 1-50ms range, default 22ms
             std::make_unique<juce::AudioParameterBool>("syncToHost", "Sync to Host", true),
             std::make_unique<juce::AudioParameterFloat>("manualBPM", "Manual BPM", 60.0f, 200.0f, 120.0f)
         })
@@ -81,7 +81,7 @@ void Pulse24SyncAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     // Set initial parameters
     pulseGenerator.setEnabled(*parameters.getRawParameterValue("enabled"));
     pulseGenerator.setPulseVelocity(*parameters.getRawParameterValue("pulseVelocity"));
-    pulseGenerator.setPulseChannel(static_cast<int>(*parameters.getRawParameterValue("pulseChannel")));
+    pulseGenerator.setPulseWidth(*parameters.getRawParameterValue("pulseWidth"));
     pulseGenerator.setSyncToHost(*parameters.getRawParameterValue("syncToHost"));
     pulseGenerator.setManualBPM(*parameters.getRawParameterValue("manualBPM"));
 }
@@ -109,7 +109,7 @@ void Pulse24SyncAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
     // Update pulse generator parameters
     pulseGenerator.setEnabled(*parameters.getRawParameterValue("enabled"));
     pulseGenerator.setPulseVelocity(*parameters.getRawParameterValue("pulseVelocity"));
-    pulseGenerator.setPulseChannel(static_cast<int>(*parameters.getRawParameterValue("pulseChannel")));
+    pulseGenerator.setPulseWidth(*parameters.getRawParameterValue("pulseWidth"));
     pulseGenerator.setSyncToHost(*parameters.getRawParameterValue("syncToHost"));
     pulseGenerator.setManualBPM(*parameters.getRawParameterValue("manualBPM"));
 

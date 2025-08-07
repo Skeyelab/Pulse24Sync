@@ -19,14 +19,14 @@ private:
     // UI Components
     juce::ToggleButton enabledButton;
     juce::Slider velocitySlider;
-    juce::Slider channelSlider;
+    juce::Slider pulseWidthSlider;  // Replaced channelSlider with pulseWidthSlider
     juce::ToggleButton syncToHostButton;
     juce::Slider manualBPMSlider;
 
     // Labels
     juce::Label enabledLabel;
     juce::Label velocityLabel;
-    juce::Label channelLabel;
+    juce::Label pulseWidthLabel;  // Replaced channelLabel with pulseWidthLabel
     juce::Label syncToHostLabel;
     juce::Label manualBPMLabel;
     juce::Label titleLabel;
@@ -35,7 +35,7 @@ private:
     // Parameter attachments
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> enabledAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> velocityAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> channelAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> pulseWidthAttachment;  // Replaced channelAttachment with pulseWidthAttachment
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> syncToHostAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> manualBPMAttachment;
 
