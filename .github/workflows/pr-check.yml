@@ -12,7 +12,7 @@ jobs:
     name: Quick Test (Ubuntu)
     runs-on: ubuntu-latest
     timeout-minutes: 20  # Prevent jobs from hanging
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -77,39 +77,39 @@ jobs:
           } catch (error) {
             testResults = 'Test log not found or test execution failed.';
           }
-          
+
           const { context } = github;
           const success = '${{ job.status }}' === 'success';
           const icon = success ? '✅' : '❌';
           const status = success ? 'PASSED' : 'FAILED';
-          
+
           const body = `## ${icon} PR Test Results: ${status}
-          
+
           **Platform:** Ubuntu Latest
           **Build Type:** Release
-          
+
           <details>
           <summary>Test Log</summary>
-          
+
           \`\`\`
           ${testResults.slice(-2000)}  // Last 2000 chars
           \`\`\`
-          
+
           </details>
-          
+
           ${success ? 'All tests passed! 🎉' : 'Some tests failed. Please check the logs above.'}`;
-          
+
           // Find existing comment
           const comments = await github.rest.issues.listComments({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: context.issue.number,
           });
-          
-          const existingComment = comments.data.find(comment => 
+
+          const existingComment = comments.data.find(comment =>
             comment.user.type === 'Bot' && comment.body.includes('PR Test Results')
           );
-          
+
           if (existingComment) {
             await github.rest.issues.updateComment({
               owner: context.repo.owner,
@@ -130,11 +130,11 @@ jobs:
     name: Build Check
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30  # Prevent jobs from hanging
-    
+
     strategy:
       matrix:
         os: [ubuntu-latest, macOS, Windows]
-    
+
     steps:
     - name: Setup Git (Windows)
       if: matrix.os == 'Windows'
@@ -143,8 +143,7 @@ jobs:
         git --version
         git config --global core.autocrlf false
         git config --global core.longpaths true
-      shell: bash
-        
+
     - name: Checkout code
       uses: actions/checkout@v4
       with:
