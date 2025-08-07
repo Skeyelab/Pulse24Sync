@@ -49,9 +49,9 @@ void Pulse24SyncAudioProcessorEditor::resized()
     velocitySlider.setBounds(bounds.removeFromTop(40));
     bounds.removeFromTop(10);
 
-    // Channel slider
-    channelLabel.setBounds(bounds.removeFromTop(20));
-    channelSlider.setBounds(bounds.removeFromTop(40));
+    // Pulse width slider
+    pulseWidthLabel.setBounds(bounds.removeFromTop(20));
+    pulseWidthSlider.setBounds(bounds.removeFromTop(40));
     bounds.removeFromTop(10);
 
     // Sync to host button
@@ -99,18 +99,18 @@ void Pulse24SyncAudioProcessorEditor::setupUI()
     velocityAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         audioProcessor.parameters, "pulseVelocity", velocitySlider);
 
-    // Channel slider
-    addAndMakeVisible(channelLabel);
-    channelLabel.setText("MIDI Channel", juce::dontSendNotification);
-    channelLabel.setFont(juce::Font(12.0f));
-    channelLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    channelLabel.setJustificationType(juce::Justification::centred);
+    // Pulse width slider
+    addAndMakeVisible(pulseWidthLabel);
+    pulseWidthLabel.setText("Pulse Width", juce::dontSendNotification);
+    pulseWidthLabel.setFont(juce::Font(12.0f));
+    pulseWidthLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    pulseWidthLabel.setJustificationType(juce::Justification::centred);
 
-    addAndMakeVisible(channelSlider);
-    channelSlider.setSliderStyle(juce::Slider::LinearHorizontal);
-    channelSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
-    channelAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.parameters, "pulseChannel", channelSlider);
+    addAndMakeVisible(pulseWidthSlider);
+    pulseWidthSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    pulseWidthSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    pulseWidthAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        audioProcessor.parameters, "pulseWidth", pulseWidthSlider);
 
     // Sync to host button
     addAndMakeVisible(syncToHostButton);
