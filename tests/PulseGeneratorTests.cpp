@@ -1,11 +1,13 @@
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_processors/juce_audio_processors.h>
 #include "TestUtils.h"
 #include "PulseGenerator.h"
 
 class PulseGeneratorTests : public juce::UnitTest
 {
 public:
-    PulseGeneratorTests() : juce::UnitTest("PulseGenerator Tests", "Core") {}
+    PulseGeneratorTests() : juce::UnitTest("PulseGenerator Tests", "Pulse24Sync") {}
 
     void runTest() override
     {

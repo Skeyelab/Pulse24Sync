@@ -16,6 +16,7 @@ set_property(TARGET Pulse24SyncTests PROPERTY CXX_STANDARD_REQUIRED ON)
 # Include directories
 target_include_directories(Pulse24SyncTests PRIVATE
     ../Source
+    ${CMAKE_BINARY_DIR}/Pulse24Sync_artefacts/JuceLibraryCode
 )
 
 # Compile definitions
