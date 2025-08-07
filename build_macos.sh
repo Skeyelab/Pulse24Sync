@@ -32,6 +32,39 @@ cleanup() {
     exit $exit_code
 }
 
+# Function to sign a bundle with proper entitlements
+sign_bundle() {
+    local bundle_path="$1"
+    local bundle_name=$(basename "$bundle_path")
+    
+    if [ -z "$CODE_SIGN_IDENTITY" ]; then
+        echo "  ⚠️  Skipping code signing for $bundle_name (no signing identity set)"
+        return 0
+    fi
+    
+    echo "  🔏 Code signing $bundle_name..."
+    
+    # Sign with entitlements and hardened runtime
+    codesign --force --options runtime --entitlements entitlements.plist \
+        --sign "$CODE_SIGN_IDENTITY" --timestamp "$bundle_path"
+    
+    if [ $? -eq 0 ]; then
+        echo "  ✅ Successfully signed $bundle_name"
+        
+        # Verify the signature
+        echo "  🔍 Verifying signature..."
+        codesign --verify --deep --strict "$bundle_path"
+        if [ $? -eq 0 ]; then
+            echo "  ✅ Signature verification passed"
+        else
+            echo "  ⚠️  Signature verification failed"
+        fi
+    else
+        echo "  ❌ Failed to sign $bundle_name"
+        return 1
+    fi
+}
+
 # Function to create clean distribution
 create_distribution() {
     echo "📦 Creating clean distribution..."
@@ -42,22 +75,25 @@ create_distribution() {
     fi
     mkdir -p dist
 
-    # Copy VST3 plugin
+    # Copy and sign VST3 plugin
     if [ -d "Builds/MacOSX/build/Release/Pulse24Sync.vst3" ]; then
         echo "  - Copying VST3 plugin..."
         cp -R "Builds/MacOSX/build/Release/Pulse24Sync.vst3" "dist/"
+        sign_bundle "dist/Pulse24Sync.vst3"
     fi
 
-    # Copy AU component
+    # Copy and sign AU component
     if [ -d "Builds/MacOSX/build/Release/Pulse24Sync.component" ]; then
         echo "  - Copying AU component..."
         cp -R "Builds/MacOSX/build/Release/Pulse24Sync.component" "dist/"
+        sign_bundle "dist/Pulse24Sync.component"
     fi
 
-    # Copy standalone application
+    # Copy and sign standalone application
     if [ -d "Builds/MacOSX/build/Release/Pulse24Sync.app" ]; then
         echo "  - Copying standalone application..."
         cp -R "Builds/MacOSX/build/Release/Pulse24Sync.app" "dist/"
+        sign_bundle "dist/Pulse24Sync.app"
     fi
 
     # Show distribution size
@@ -92,6 +128,36 @@ if [ ! -f "Pulse24Sync.jucer" ]; then
     echo "❌ Error: Pulse24Sync.jucer not found. Please run this script from the project root directory."
     exit 1
 fi
+
+# Check for code signing setup
+echo "🔐 Checking code signing configuration..."
+
+# Look for signing identity (can be set via environment variable or detected)
+if [ -z "$CODE_SIGN_IDENTITY" ]; then
+    # Try to detect Apple Developer certificates
+    AVAILABLE_IDENTITIES=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1)
+    if [ ! -z "$AVAILABLE_IDENTITIES" ]; then
+        # Extract the identity from the security output
+        CODE_SIGN_IDENTITY=$(echo "$AVAILABLE_IDENTITIES" | sed -n 's/.*"\(.*\)"/\1/p')
+        echo "  🔍 Auto-detected signing identity: $CODE_SIGN_IDENTITY"
+    else
+        echo "  ⚠️  No Developer ID Application certificate found"
+        echo "  ℹ️  Plugins will be built unsigned (may trigger security warnings)"
+        echo "  ℹ️  To enable signing, set CODE_SIGN_IDENTITY environment variable"
+        echo "     Example: export CODE_SIGN_IDENTITY=\"Developer ID Application: Your Name (TEAMID)\""
+    fi
+else
+    echo "  ✅ Using specified signing identity: $CODE_SIGN_IDENTITY"
+fi
+
+# Check for entitlements file
+if [ ! -f "entitlements.plist" ]; then
+    echo "  ⚠️  entitlements.plist not found - code signing may fail"
+else
+    echo "  ✅ Found entitlements.plist"
+fi
+
+echo ""
 
 # Check if Projucer is available
 PROJUCER_PATH="/Applications/JUCE 2/Projucer.app/Contents/MacOS/Projucer"
