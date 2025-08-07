@@ -14,6 +14,7 @@ jobs:
   test-ubuntu:
     name: Test Ubuntu
     runs-on: ubuntu-latest
+    timeout-minutes: 20  # Prevent jobs from hanging
     
     steps:
     - name: Checkout
@@ -23,8 +24,9 @@ jobs:
 
     - name: Install dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y \
+        # Fast and reliable dependency installation
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends \
           build-essential \
           cmake \
           libasound2-dev \
@@ -64,6 +66,7 @@ jobs:
   test-macos:
     name: Test macOS
     runs-on: macOS
+    timeout-minutes: 25  # Prevent jobs from hanging
     
     steps:
     - name: Checkout
@@ -94,6 +97,7 @@ jobs:
   test-windows:
     name: Test Windows
     runs-on: Windows
+    timeout-minutes: 30  # Prevent jobs from hanging
     
     steps:
     - name: Setup Git
@@ -132,6 +136,7 @@ jobs:
   build-check:
     name: Build Check
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 25  # Prevent jobs from hanging
     strategy:
       matrix:
         os: [ubuntu-latest, macOS, Windows]

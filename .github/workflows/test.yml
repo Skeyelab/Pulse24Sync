@@ -15,6 +15,7 @@ jobs:
   test:
     name: Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45  # Prevent jobs from hanging
     
     strategy:
       fail-fast: false  # Don't cancel other jobs if one fails
@@ -23,8 +24,9 @@ jobs:
         include:
           - os: ubuntu-latest
             install_deps: |
-              sudo apt-get update
-              sudo apt-get install -y \
+              # Fast and reliable dependency installation
+              sudo apt-get update -qq
+              sudo apt-get install -y --no-install-recommends \
                 build-essential \
                 cmake \
                 ninja-build \
@@ -127,6 +129,7 @@ jobs:
   test-configurations:
     name: Test ${{ matrix.build_type }} on Ubuntu
     runs-on: ubuntu-latest
+    timeout-minutes: 25  # Prevent jobs from hanging
     
     strategy:
       matrix:
@@ -187,6 +190,7 @@ jobs:
   test-sanitizers:
     name: Test with ${{ matrix.sanitizer }}
     runs-on: ubuntu-latest
+    timeout-minutes: 35  # Prevent jobs from hanging (sanitizers need more time)
     
     strategy:
       matrix:
@@ -238,6 +242,7 @@ jobs:
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # Prevent jobs from hanging
     
     steps:
     - name: Checkout code
