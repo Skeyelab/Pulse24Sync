@@ -40,7 +40,7 @@ private:
     bool isEnabled = true;
     float pulseVelocity = 100.0f / 127.0f; // Store as gain (0.0 to 1.0)
     int pulseChannel = 1; // Keep for compatibility
-    bool syncToHost = true;
+    bool syncToHost = false;
     float manualBPM = 120.0f;
 
     // Host tempo info
