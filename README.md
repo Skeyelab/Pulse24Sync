@@ -30,7 +30,8 @@ A VST3 plugin that generates precisely 24 MIDI pulses per quarter note, with rea
 
 1. **Clone the repository and navigate to it**:
    ```bash
-   cd /Users/edahl/Documents/GitHub/Pulse24Sync
+   git clone https://github.com/Skeyelab/Pulse24Sync.git
+   cd Pulse24Sync
    ```
 
 2. **Create a build directory**:
@@ -51,9 +52,10 @@ A VST3 plugin that generates precisely 24 MIDI pulses per quarter note, with rea
 
 ### Windows
 
-1. **Open Command Prompt or PowerShell**:
+1. **Clone the repository and open Command Prompt or PowerShell**:
    ```cmd
-   cd C:\path\to\Pulse24Sync
+   git clone https://github.com/Skeyelab/Pulse24Sync.git
+   cd Pulse24Sync
    ```
 
 2. **Create build directory**:
@@ -74,12 +76,18 @@ A VST3 plugin that generates precisely 24 MIDI pulses per quarter note, with rea
 
 ### Linux
 
-1. **Install dependencies** (Ubuntu/Debian):
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/Skeyelab/Pulse24Sync.git
+   cd Pulse24Sync
+   ```
+
+2. **Install dependencies** (Ubuntu/Debian):
    ```bash
    ./install-linux-deps.sh
    ```
 
-2. **Build the plugin**:
+3. **Build the plugin**:
    ```bash
    ./build.sh
    ```
@@ -88,7 +96,44 @@ For detailed Linux build instructions and other distributions, see [LINUX_BUILD_
 
 ## Installation
 
-After building, the VST3 plugin will be automatically copied to the appropriate system location:
+### For Released Binaries
+
+Download the latest release from [GitHub Releases](https://github.com/Skeyelab/Pulse24Sync/releases):
+
+#### macOS
+1. Download the appropriate package:
+   - `Pulse24Sync-macOS-vst3.zip` for VST3 plugin
+   - `Pulse24Sync-macOS-au.zip` for Audio Unit plugin
+   - `Pulse24Sync-macOS-standalone.zip` for standalone application
+2. Extract the archive
+3. Copy the plugin files to:
+   - **VST3**: `~/Library/Audio/Plug-Ins/VST3/` or `/Library/Audio/Plug-Ins/VST3/`
+   - **Audio Unit**: `~/Library/Audio/Plug-Ins/Components/` or `/Library/Audio/Plug-Ins/Components/`
+   - **Standalone**: Applications folder or anywhere you prefer
+
+#### Windows
+1. Download the appropriate package:
+   - `Pulse24Sync-Windows-vst3.zip` for VST3 plugin
+   - `Pulse24Sync-Windows-standalone.zip` for standalone application
+2. Extract the archive
+3. Copy the plugin files to:
+   - **VST3**: `C:\Program Files\Common Files\VST3\`
+   - **Standalone**: Anywhere you prefer
+
+#### Linux
+1. Download the appropriate package:
+   - `Pulse24Sync-Linux-vst3.zip` for VST3 plugin
+   - `Pulse24Sync-Linux-standalone.zip` for standalone application
+2. Extract the archive
+3. Copy the plugin files to:
+   - **VST3**: `~/.vst3/` (create the directory if it doesn't exist)
+   - **Standalone**: Anywhere you prefer (make executable with `chmod +x Pulse24Sync`)
+
+Alternatively, you can build from source using the instructions below.
+
+### After Building from Source
+
+When building from source, the plugin will be automatically copied to the appropriate system location:
 
 - **macOS**: `~/Library/Audio/Plug-Ins/VST3/Pulse24Sync.vst3`
 - **Windows**: `C:\Program Files\Common Files\VST3\Pulse24Sync.vst3`
@@ -124,7 +169,8 @@ This project includes an automated release system that builds both macOS and Win
 #### What gets built automatically:
 
 - **macOS**: VST3, Audio Unit (.component), and Standalone (.app)
-- **Windows**: VST3 and Standalone (.exe)
+- **Windows**: VST3 and Standalone (.exe)  
+- **Linux**: VST3 and Standalone
 
 #### Release workflow:
 
@@ -138,7 +184,7 @@ This project includes an automated release system that builds both macOS and Win
 #### Manual release creation:
 
 If you prefer to create releases manually:
-1. Go to [GitHub Releases](https://github.com/your-repo/releases)
+1. Go to [GitHub Releases](https://github.com/Skeyelab/Pulse24Sync/releases)
 2. Click "Create a new release"
 3. Set the tag version (e.g., `v1.0.0`)
 4. Upload the built plugin files manually

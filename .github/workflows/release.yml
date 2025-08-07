@@ -422,15 +422,24 @@ jobs:
           body: |
             ## Pulse24Sync ${{ github.ref_name }}
 
+            A VST3 plugin that generates precisely 24 MIDI pulses per quarter note, with real-time tempo synchronization to your DAW.
+
             ### Downloads
             - **macOS**: VST3, Audio Unit, and Standalone versions
             - **Windows**: VST3 and Standalone versions
+            - **Linux**: VST3 and Standalone versions
 
-            ### Installation
-            - **macOS**: Copy the .vst3, .component, or .app files to your respective plugin directories
-            - **Windows**: Copy the .vst3 files to your VST3 directory
+            ### Installation Instructions
+            Each download package includes comprehensive installation instructions:
+            - `INSTALLATION.md` - Complete installation guide for all platforms
+            - `README.md` - Project overview and build instructions
+            
+            **Quick Install**:
+            - **macOS**: Copy plugins to `~/Library/Audio/Plug-Ins/VST3/` (VST3) or `~/Library/Audio/Plug-Ins/Components/` (AU)
+            - **Windows**: Copy plugins to `C:\Program Files\Common Files\VST3\`
+            - **Linux**: Copy plugins to `~/.vst3/` (VST3)
 
-            ### Changes
+            ### What's New
             See the [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref }}) for detailed changes.
           draft: false
           prerelease: false
@@ -455,6 +464,12 @@ jobs:
         run: |
           mkdir -p release-packages
 
+          # Copy documentation files for inclusion in releases
+          echo "Preparing documentation files..."
+          cp README.md release-packages/ || echo "README.md not found"
+          cp INSTALLATION.md release-packages/ || echo "INSTALLATION.md not found"
+          cp LINUX_BUILD_GUIDE.md release-packages/ || echo "LINUX_BUILD_GUIDE.md not found"
+
           # macOS packages
           if [ -d "./artifacts/macos-builds" ]; then
             echo "Creating macOS packages..."
@@ -464,6 +479,10 @@ jobs:
               cd ./artifacts/macos-builds
               zip -r ../../release-packages/Pulse24Sync-macOS-vst3.zip Pulse24Sync.vst3
               cd ../..
+              # Add documentation to the package
+              cd release-packages/
+              zip Pulse24Sync-macOS-vst3.zip README.md INSTALLATION.md || echo "Documentation not found"
+              cd ../
             fi
 
             # Audio Unit
@@ -471,6 +490,10 @@ jobs:
               cd ./artifacts/macos-builds
               zip -r ../../release-packages/Pulse24Sync-macOS-au.zip Pulse24Sync.component
               cd ../..
+              # Add documentation to the package
+              cd release-packages/
+              zip Pulse24Sync-macOS-au.zip README.md INSTALLATION.md || echo "Documentation not found"
+              cd ../
             fi
 
             # Standalone
@@ -478,6 +501,10 @@ jobs:
               cd ./artifacts/macos-builds
               zip -r ../../release-packages/Pulse24Sync-macOS-standalone.zip Pulse24Sync.app
               cd ../..
+              # Add documentation to the package
+              cd release-packages/
+              zip Pulse24Sync-macOS-standalone.zip README.md INSTALLATION.md || echo "Documentation not found"
+              cd ../
             fi
           fi
 
@@ -490,6 +517,10 @@ jobs:
               cd ./artifacts/windows-builds/VST3
               zip -r ../../../release-packages/Pulse24Sync-Windows-vst3.zip Pulse24Sync.vst3
               cd ../../..
+              # Add documentation to the package
+              cd release-packages/
+              zip Pulse24Sync-Windows-vst3.zip README.md INSTALLATION.md || echo "Documentation not found"
+              cd ../
             fi
 
             # Standalone
@@ -497,6 +528,37 @@ jobs:
               cd "./artifacts/windows-builds/Standalone Plugin"
               zip ../../../release-packages/Pulse24Sync-Windows-standalone.zip Pulse24Sync.exe
               cd ../../..
+              # Add documentation to the package
+              cd release-packages/
+              zip Pulse24Sync-Windows-standalone.zip README.md INSTALLATION.md || echo "Documentation not found"
+              cd ../
+            fi
+          fi
+
+          # Linux packages
+          if [ -d "./artifacts/linux-builds" ]; then
+            echo "Creating Linux packages..."
+
+            # VST3
+            if [ -d "./artifacts/linux-builds/Pulse24Sync.vst3" ]; then
+              cd ./artifacts/linux-builds
+              zip -r ../../release-packages/Pulse24Sync-Linux-vst3.zip Pulse24Sync.vst3
+              cd ../..
+              # Add documentation to the package
+              cd release-packages/
+              zip Pulse24Sync-Linux-vst3.zip README.md INSTALLATION.md LINUX_BUILD_GUIDE.md || echo "Documentation not found"
+              cd ../
+            fi
+
+            # Standalone
+            if [ -f "./artifacts/linux-builds/Pulse24Sync" ]; then
+              cd ./artifacts/linux-builds
+              zip ../../release-packages/Pulse24Sync-Linux-standalone.zip Pulse24Sync
+              cd ../..
+              # Add documentation to the package
+              cd release-packages/
+              zip Pulse24Sync-Linux-standalone.zip README.md INSTALLATION.md LINUX_BUILD_GUIDE.md || echo "Documentation not found"
+              cd ../
             fi
           fi
 
@@ -555,5 +617,27 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release-packages/Pulse24Sync-Windows-standalone.zip
           asset_name: Pulse24Sync-Windows-standalone.zip
+          asset_content_type: application/zip
+        continue-on-error: true
+
+      - name: Upload Linux VST3
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./release-packages/Pulse24Sync-Linux-vst3.zip
+          asset_name: Pulse24Sync-Linux-vst3.zip
+          asset_content_type: application/zip
+        continue-on-error: true
+
+      - name: Upload Linux Standalone
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./release-packages/Pulse24Sync-Linux-standalone.zip
+          asset_name: Pulse24Sync-Linux-standalone.zip
           asset_content_type: application/zip
         continue-on-error: true
