@@ -427,7 +427,7 @@ jobs:
             ### Downloads
             - **macOS**: VST3, Audio Unit, and Standalone versions
             - **Windows**: VST3 and Standalone versions
-            - **Linux**: Build from source (see included documentation)
+            - **Linux**: VST3 and Standalone versions
 
             ### Installation Instructions
             Each download package includes comprehensive installation instructions:
@@ -437,6 +437,7 @@ jobs:
             **Quick Install**:
             - **macOS**: Copy plugins to `~/Library/Audio/Plug-Ins/VST3/` (VST3) or `~/Library/Audio/Plug-Ins/Components/` (AU)
             - **Windows**: Copy plugins to `C:\Program Files\Common Files\VST3\`
+            - **Linux**: Copy plugins to `~/.vst3/` (VST3)
 
             ### What's New
             See the [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref }}) for detailed changes.
@@ -534,6 +535,33 @@ jobs:
             fi
           fi
 
+          # Linux packages
+          if [ -d "./artifacts/linux-builds" ]; then
+            echo "Creating Linux packages..."
+
+            # VST3
+            if [ -d "./artifacts/linux-builds/Pulse24Sync.vst3" ]; then
+              cd ./artifacts/linux-builds
+              zip -r ../../release-packages/Pulse24Sync-Linux-vst3.zip Pulse24Sync.vst3
+              cd ../..
+              # Add documentation to the package
+              cd release-packages/
+              zip Pulse24Sync-Linux-vst3.zip README.md INSTALLATION.md LINUX_BUILD_GUIDE.md || echo "Documentation not found"
+              cd ../
+            fi
+
+            # Standalone
+            if [ -f "./artifacts/linux-builds/Pulse24Sync" ]; then
+              cd ./artifacts/linux-builds
+              zip ../../release-packages/Pulse24Sync-Linux-standalone.zip Pulse24Sync
+              cd ../..
+              # Add documentation to the package
+              cd release-packages/
+              zip Pulse24Sync-Linux-standalone.zip README.md INSTALLATION.md LINUX_BUILD_GUIDE.md || echo "Documentation not found"
+              cd ../
+            fi
+          fi
+
           echo "Created packages:"
           ls -la release-packages/
 
@@ -589,5 +617,27 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./release-packages/Pulse24Sync-Windows-standalone.zip
           asset_name: Pulse24Sync-Windows-standalone.zip
+          asset_content_type: application/zip
+        continue-on-error: true
+
+      - name: Upload Linux VST3
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./release-packages/Pulse24Sync-Linux-vst3.zip
+          asset_name: Pulse24Sync-Linux-vst3.zip
+          asset_content_type: application/zip
+        continue-on-error: true
+
+      - name: Upload Linux Standalone
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./release-packages/Pulse24Sync-Linux-standalone.zip
+          asset_name: Pulse24Sync-Linux-standalone.zip
           asset_content_type: application/zip
         continue-on-error: true

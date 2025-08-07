@@ -121,7 +121,15 @@ Download the latest release from [GitHub Releases](https://github.com/Skeyelab/P
    - **Standalone**: Anywhere you prefer
 
 #### Linux
-Linux builds are currently available through manual compilation only. See the build instructions below.
+1. Download the appropriate package:
+   - `Pulse24Sync-Linux-vst3.zip` for VST3 plugin
+   - `Pulse24Sync-Linux-standalone.zip` for standalone application
+2. Extract the archive
+3. Copy the plugin files to:
+   - **VST3**: `~/.vst3/` (create the directory if it doesn't exist)
+   - **Standalone**: Anywhere you prefer (make executable with `chmod +x Pulse24Sync`)
+
+Alternatively, you can build from source using the instructions below.
 
 ### After Building from Source
 
@@ -161,8 +169,8 @@ This project includes an automated release system that builds both macOS and Win
 #### What gets built automatically:
 
 - **macOS**: VST3, Audio Unit (.component), and Standalone (.app)
-- **Windows**: VST3 and Standalone (.exe)
-- **Linux**: VST3 and Standalone (via CI, but not yet included in automated releases)
+- **Windows**: VST3 and Standalone (.exe)  
+- **Linux**: VST3 and Standalone
 
 #### Release workflow:
 

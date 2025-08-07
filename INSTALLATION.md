@@ -78,7 +78,51 @@ Some DAWs may look for VST3 plugins in other locations:
 
 ### Linux Installation
 
-Linux users need to build from source. See the build instructions in the main README.md file.
+1. **Download the appropriate package**:
+   - `Pulse24Sync-Linux-vst3.zip` - For VST3 plugin
+   - `Pulse24Sync-Linux-standalone.zip` - For standalone application
+
+2. **Extract the package** using your file manager or command line:
+   ```bash
+   unzip Pulse24Sync-Linux-vst3.zip
+   # or
+   unzip Pulse24Sync-Linux-standalone.zip
+   ```
+
+3. **Install the plugin**:
+   
+   **For VST3 Plugin**:
+   ```bash
+   # Create VST3 directory if it doesn't exist
+   mkdir -p ~/.vst3
+   
+   # Copy the plugin
+   cp -r Pulse24Sync.vst3 ~/.vst3/
+   ```
+   
+   **For Standalone Application**:
+   ```bash
+   # Copy to a directory in your PATH or create a local directory
+   cp Pulse24Sync ~/bin/  # or any preferred location
+   
+   # Make executable
+   chmod +x ~/bin/Pulse24Sync
+   ```
+
+4. **Restart your DAW** to detect the new plugin
+
+#### Alternative Installation Methods
+
+**System-wide Installation (requires sudo)**:
+- **VST3**: Copy to `/usr/lib/vst3/` or `/usr/local/lib/vst3/`
+
+**For specific DAWs**:
+- Some Linux DAWs may use different VST3 paths
+- Check your DAW's plugin directory settings
+- Common additional paths: `/usr/share/vst3/`, `~/.local/share/vst3/`
+
+**Building from Source**:
+If you prefer to build from source, see the build instructions in the main README.md file.
 
 ## Verification
 
