@@ -222,21 +222,21 @@ jobs:
           sign_bundle() {
               local bundle_path="$1"
               local bundle_name=$(basename "$bundle_path")
-              
+
               if [ -z "$CODE_SIGN_IDENTITY" ]; then
                   echo "  ⚠️  Skipping code signing for $bundle_name (no signing identity set)"
                   return 0
               fi
-              
+
               echo "  🔏 Code signing $bundle_name..."
-              
+
               # Sign with entitlements and hardened runtime
               codesign --force --options runtime --entitlements entitlements.plist \
                   --sign "$CODE_SIGN_IDENTITY" --timestamp "$bundle_path"
-              
+
               if [ $? -eq 0 ]; then
                   echo "  ✅ Successfully signed $bundle_name"
-                  
+
                   # Verify the signature
                   echo "  🔍 Verifying signature..."
                   codesign --verify --deep --strict "$bundle_path"
@@ -301,36 +301,36 @@ jobs:
           notarize_bundle() {
               local bundle_path="$1"
               local bundle_name=$(basename "$bundle_path")
-              
+
               echo "  📦 Creating zip for notarization: $bundle_name"
-              
+
               # Create a temporary directory for the zip
               local temp_dir=$(mktemp -d)
               local zip_path="$temp_dir/${bundle_name}.zip"
-              
+
               # Create zip file
               cd "$(dirname "$bundle_path")"
               zip -r "$zip_path" "$(basename "$bundle_path")"
-              
+
               echo "  🚀 Submitting $bundle_name for notarization..."
-              
+
               # Submit for notarization
               local submission_id=$(xcrun notarytool submit "$zip_path" \
                   --apple-id "$APPLE_ID" \
                   --password "$NOTARIZATION_PASSWORD" \
                   --team-id "$DEVELOPMENT_TEAM" \
                   --wait 2>&1 | grep "id:" | cut -d' ' -f2)
-              
+
               if [ $? -eq 0 ] && [ ! -z "$submission_id" ]; then
                   echo "  ✅ Notarization completed for $bundle_name (ID: $submission_id)"
-                  
+
                   # Staple the notarization ticket
                   echo "  📎 Stapling notarization ticket to $bundle_name..."
                   xcrun stapler staple "$bundle_path"
-                  
+
                   if [ $? -eq 0 ]; then
                       echo "  ✅ Successfully stapled notarization to $bundle_name"
-                      
+
                       # Verify notarization
                       echo "  🔍 Verifying notarization..."
                       xcrun stapler validate "$bundle_path"
@@ -346,7 +346,7 @@ jobs:
                   echo "  ❌ Notarization failed for $bundle_name"
                   return 1
               fi
-              
+
               # Clean up
               rm -rf "$temp_dir"
           }
@@ -603,7 +603,7 @@ jobs:
             Each download package includes comprehensive installation instructions:
             - `INSTALLATION.md` - Complete installation guide for all platforms
             - `README.md` - Project overview and build instructions
-            
+
             **Quick Install**:
             - **macOS**: Copy plugins to `~/Library/Audio/Plug-Ins/VST3/` (VST3) or `~/Library/Audio/Plug-Ins/Components/` (AU)
             - **Windows**: Copy plugins to `C:\Program Files\Common Files\VST3\`
