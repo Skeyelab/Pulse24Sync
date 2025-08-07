@@ -1,0 +1,173 @@
+name: Tests (Simple)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  test-ubuntu:
+    name: Test Ubuntu
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          libasound2-dev \
+          libjack-jackd2-dev \
+          libfreetype6-dev \
+          libx11-dev \
+          libxcomposite-dev \
+          libxcursor-dev \
+          libxext-dev \
+          libxinerama-dev \
+          libxrandr-dev \
+          libxrender-dev \
+          libgl1-mesa-dev \
+          libglu1-mesa-dev \
+          libcurl4-openssl-dev
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          build-tests/_deps
+        key: ubuntu-deps-${{ hashFiles('CMakeLists.txt') }}
+        restore-keys: ubuntu-deps-
+
+    - name: Configure
+      run: |
+        cmake -B build-tests \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DPULSE24SYNC_BUILD_TESTS=ON
+
+    - name: Build
+      run: cmake --build build-tests --config ${{ env.BUILD_TYPE }} --parallel
+
+    - name: Test
+      working-directory: build-tests
+      run: |
+        ctest --output-on-failure --verbose -C ${{ env.BUILD_TYPE }}
+
+  test-macos:
+    name: Test macOS
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          build-tests/_deps
+        key: macos-deps-${{ hashFiles('CMakeLists.txt') }}
+        restore-keys: macos-deps-
+
+    - name: Configure
+      run: |
+        cmake -B build-tests \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DPULSE24SYNC_BUILD_TESTS=ON
+
+    - name: Build
+      run: cmake --build build-tests --config ${{ env.BUILD_TYPE }} --parallel
+
+    - name: Test
+      working-directory: build-tests
+      run: |
+        ctest --output-on-failure --verbose -C ${{ env.BUILD_TYPE }}
+
+  test-windows:
+    name: Test Windows
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          build-tests/_deps
+        key: windows-deps-${{ hashFiles('CMakeLists.txt') }}
+        restore-keys: windows-deps-
+
+    - name: Configure
+      run: |
+        cmake -B build-tests -A x64 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPULSE24SYNC_BUILD_TESTS=ON
+
+    - name: Build
+      run: cmake --build build-tests --config ${{ env.BUILD_TYPE }} --parallel
+
+    - name: Test
+      working-directory: build-tests
+      run: |
+        ctest --output-on-failure --verbose -C ${{ env.BUILD_TYPE }}
+
+  # Quick build-only checks for faster feedback
+  build-check:
+    name: Build Check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          libasound2-dev \
+          libjack-jackd2-dev \
+          libfreetype6-dev \
+          libx11-dev \
+          libxcomposite-dev \
+          libxcursor-dev \
+          libxext-dev \
+          libxinerama-dev \
+          libxrandr-dev \
+          libxrender-dev \
+          libgl1-mesa-dev \
+          libglu1-mesa-dev \
+          libcurl4-openssl-dev
+
+    - name: Configure
+      run: |
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          cmake -B build -A x64 -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPULSE24SYNC_BUILD_TESTS=OFF
+        else
+          cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DPULSE24SYNC_BUILD_TESTS=OFF
+        fi
+      shell: bash
+
+    - name: Build
+      run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel

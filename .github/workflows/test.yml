@@ -52,7 +52,7 @@ jobs:
           - os: windows-latest
             install_deps: |
               # Windows dependencies handled by vcpkg or built-in
-              choco install ninja
+              echo "Using built-in Windows dependencies"
             generator: "Visual Studio 17 2022"
 
     steps:
@@ -70,7 +70,7 @@ jobs:
       shell: bash
 
     - name: Cache JUCE
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           build-tests/_deps
@@ -93,7 +93,11 @@ jobs:
       working-directory: build-tests
       run: |
         # Run our custom test executable
-        ./tests/Pulse24SyncTests --verbose
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          ./tests/${{ env.BUILD_TYPE }}/Pulse24SyncTests.exe --verbose
+        else
+          ./tests/Pulse24SyncTests --verbose
+        fi
       shell: bash
       
     - name: Run CTest
@@ -102,7 +106,7 @@ jobs:
 
     - name: Upload test logs
       if: failure()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-logs-${{ matrix.os }}
         path: |
@@ -147,7 +151,7 @@ jobs:
           libcurl4-openssl-dev
 
     - name: Cache JUCE
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           build-tests/_deps
@@ -289,7 +293,7 @@ jobs:
         lcov --list coverage.info
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./coverage.info
         flags: unittests

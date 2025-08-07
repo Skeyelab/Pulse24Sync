@@ -40,7 +40,7 @@ jobs:
           libcurl4-openssl-dev
 
     - name: Cache JUCE
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           build-tests/_deps

@@ -57,3 +57,12 @@ set_tests_properties(Pulse24SyncUnitTests PROPERTIES
     TIMEOUT 300
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
+
+# Windows-specific configuration
+if(WIN32)
+    # Copy any necessary DLLs for Windows testing
+    # This ensures tests can find dependencies at runtime
+    set_target_properties(Pulse24SyncTests PROPERTIES
+        VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    )
+endif()

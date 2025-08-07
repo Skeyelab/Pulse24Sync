@@ -1,5 +1,5 @@
 [![Build Pulse24Sync](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/build.yml/badge.svg)](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/build.yml)
-[![Tests](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/test.yml/badge.svg)](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/test.yml)
+[![Tests](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/test-simple.yml/badge.svg)](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/test-simple.yml)
 [![PR Check](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/pr-check.yml/badge.svg)](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/pr-check.yml)
 
 # Pulse24Sync VST Plugin
