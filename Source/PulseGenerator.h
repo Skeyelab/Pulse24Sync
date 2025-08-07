@@ -17,11 +17,11 @@ public:
     void setEnabled(bool enabled) { isEnabled = enabled; }
     void setPulseVelocity(float velocity) { pulseVelocity = static_cast<juce::uint8>(velocity); }
     void setPulseChannel(int channel) { pulseChannel = channel; }
-    void setSyncToHost(bool sync) { syncToHost = sync; }
-    void setManualBPM(float bpm) { manualBPM = bpm; }
+    void setSyncToHost(bool sync) { syncToHost = sync; updatePulseRate(); }
+    void setManualBPM(float bpm) { manualBPM = bpm; updatePulseRate(); }
 
     // Host tempo synchronization
-    void setHostTempo(double bpm) { hostBPM = bpm; }
+    void setHostTempo(double bpm) { hostBPM = bpm; updatePulseRate(); }
     void setHostIsPlaying(bool playing) { hostIsPlaying = playing; }
     void setHostPosition(double timeInSeconds) { hostPosition = timeInSeconds; }
 
