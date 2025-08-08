@@ -1,97 +1,25 @@
 [![Build Pulse24Sync](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/build.yml/badge.svg)](https://github.com/Skeyelab/Pulse24Sync/actions/workflows/build.yml)
 
-# Pulse24Sync VST Plugin
+# Pulse24Sync
 
-A VST3 plugin that generates precisely 24 audio pulses per quarter note, with real-time tempo synchronization to your DAW.
+A JUCE-based audio plugin that generates a 24 PPQN pulse train for tempo sync testing. Ships as VST3/AU/Standalone.
 
 ## Features
+- 24 PPQN pulse generation, audible 1 kHz tone per pulse
+- Host tempo sync with resilient re-sync on transport jumps
+- Manual BPM mode when host sync disabled
+- Adjustable pulse width (1–50 ms) and velocity (0–127)
 
-- **24 Pulses per Quarter Note**: Generates exactly 24 audio pulses per quarter note
-- **Tempo Synchronization**: Automatically syncs to your DAW's tempo and stays in time during tempo changes
-- **Manual Mode**: Option to set a manual BPM when not syncing to host
-- **Configurable Parameters**:
-  - Enable/Disable pulse generation
-  - Adjust pulse volume (0-127)
-  - Toggle host tempo synchronization
-  - Manual BPM setting (60-200 BPM)
-- **Real-time Status Display**: Shows current BPM, sync status, and pulse rate
-- **VST3 Format**: Compatible with all major DAWs
+## Dev Docs
+- See `ARCHITECTURE.md` for an overview of components, parameters, and audio flow.
+- See platform build guides for signing and packaging:
+  - `MACOS_CODE_SIGNING_GUIDE.md`
+  - `WINDOWS_BUILD_GUIDE.md`
+  - `LINUX_BUILD_GUIDE.md`
 
-## Build Requirements
-
-- **CMake** 3.15 or higher
-- **C++17** compatible compiler
-- **JUCE Framework** (will be downloaded automatically)
-
-## Building the Plugin
-
-### macOS
-
-1. **Clone the repository and navigate to it**:
-   ```bash
-   git clone https://github.com/Skeyelab/Pulse24Sync.git
-   cd Pulse24Sync
-   ```
-
-2. **Create a build directory**:
-   ```bash
-   mkdir build
-   cd build
-   ```
-
-3. **Configure with CMake**:
-   ```bash
-   cmake ..
-   ```
-
-4. **Build the plugin**:
-   ```bash
-   make -j$(nproc)
-   ```
-
-### Windows
-
-1. **Clone the repository and open Command Prompt or PowerShell**:
-   ```cmd
-   git clone https://github.com/Skeyelab/Pulse24Sync.git
-   cd Pulse24Sync
-   ```
-
-2. **Create build directory**:
-   ```cmd
-   mkdir build
-   cd build
-   ```
-
-3. **Configure with CMake**:
-   ```cmd
-   cmake .. -G "Visual Studio 16 2019" -A x64
-   ```
-
-4. **Build the plugin**:
-   ```cmd
-   cmake --build . --config Release
-   ```
-
-### Linux
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/Skeyelab/Pulse24Sync.git
-   cd Pulse24Sync
-   ```
-
-2. **Install dependencies** (Ubuntu/Debian):
-   ```bash
-   ./install-linux-deps.sh
-   ```
-
-3. **Build the plugin**:
-   ```bash
-   ./build.sh
-   ```
-
-For detailed Linux build instructions and other distributions, see [LINUX_BUILD_GUIDE.md](LINUX_BUILD_GUIDE.md).
+## Building
+- Cross-platform build scripts are in the repo root.
+- CMake project file: `CMakeLists.txt`
 
 ## Installation
 

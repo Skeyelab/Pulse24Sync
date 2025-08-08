@@ -1,5 +1,11 @@
 #pragma once
 
+// PulseGenerator
+// - Engine that generates a 1kHz pulse train at 24 PPQN
+// - Supports host-sync via AudioPlayHead (BPM, playing state, PPQ position)
+// - Manual BPM mode when not synced to host
+// - Pulse width expressed in ms; converted to samples per current sample rate
+
 #include <JuceHeader.h>
 
 class PulseGenerator
@@ -46,17 +52,17 @@ private:
     // Host tempo info
     double hostBPM = 120.0;
     bool hostIsPlaying = false;
-    double hostPosition = 0.0;
+    double hostPosition = 0.0;     // Seconds
     double hostPPQPosition = 0.0;  // PPQ position from DAW
     double lastHostBPM = 120.0;    // Track tempo changes
     double lastPPQPosition = 0.0;  // Track PPQ position for sync
 
-    // Timing
+    // Timing (sample-domain)
     double sampleRate = 44100.0;
-    double pulseRate = 0.0;  // pulses per second
-    double pulseInterval = 0.0;  // samples between pulses
+    double pulseRate = 0.0;        // pulses per second
+    double pulseInterval = 0.0;    // samples between pulses
     double currentPosition = 0.0;  // current position in samples
-    double nextPulseTime = 0.0;  // time of next pulse in samples
+    double nextPulseTime = 0.0;    // time of next pulse in samples
     double pulsesPerQuarterNote = 24.0;  // Standard MIDI clock rate
     double samplesPerPulse = 0.0;  // Samples per pulse at current tempo
 
