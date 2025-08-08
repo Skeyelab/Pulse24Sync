@@ -7,8 +7,8 @@ PulseGenerator::PulseGenerator()
 void PulseGenerator::prepare(double newSampleRate)
 {
     sampleRate = newSampleRate;
-    // Update pulse duration based on sample rate (keep it around 22ms)
-    pulseDurationSamples = static_cast<int>(sampleRate * 0.022); // 22ms pulse duration
+    // Update pulse duration based on sample rate and pulse width
+    updatePulseDuration();
     reset();
     updatePulseRate();
 }
@@ -33,7 +33,7 @@ void PulseGenerator::process(int numSamples, double currentSampleRate, juce::Aud
     if (currentSampleRate != sampleRate)
     {
         sampleRate = currentSampleRate;
-        pulseDurationSamples = static_cast<int>(sampleRate * 0.022); // Update pulse duration
+        updatePulseDuration(); // Update pulse duration based on new sample rate
         updatePulseRate();
     }
 
@@ -179,7 +179,7 @@ float PulseGenerator::generatePulseSample(int sampleIndex)
     if (sampleIndex >= pulseDurationSamples)
         return 0.0f;
 
-    // Generate sine wave
+    // Generate sine wave at 1 kHz
     float phase = (2.0f * juce::MathConstants<float>::pi * PULSE_FREQUENCY * sampleIndex) / static_cast<float>(sampleRate);
     float sineWave = std::sin(phase);
 
@@ -196,4 +196,10 @@ float PulseGenerator::generatePulseSample(int sampleIndex)
     }
 
     return sineWave * envelope * pulseVelocity * 0.1f; // Scale down to prevent clipping
+}
+
+void PulseGenerator::updatePulseDuration()
+{
+    // Convert pulse width from milliseconds to samples
+    pulseDurationSamples = static_cast<int>(sampleRate * pulseWidthMs * 0.001);
 }
