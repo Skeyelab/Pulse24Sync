@@ -52,6 +52,13 @@ jobs:
           chmod +x build.sh
           ./build.sh
 
+      - name: Build and run tests (Linux)
+        run: |
+          echo "Enabling and running CTest suite..."
+          cmake -S . -B build -DBUILD_TESTING=ON
+          cmake --build build -j $(nproc) --target Pulse24Sync_tests
+          ctest --test-dir build --output-on-failure
+
       - name: Create clean distribution
         run: |
           echo "Creating clean distribution for Linux..."

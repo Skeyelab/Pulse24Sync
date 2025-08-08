@@ -126,3 +126,55 @@ if(UNIX AND NOT APPLE)
         ${CURL_CFLAGS_OTHER}
     )
 endif()
+
+# ==========================
+# Testing (Catch2 + CTest)
+# ==========================
+include(CTest)
+
+if (BUILD_TESTING)
+    message(STATUS "Building tests")
+
+    # Fetch Catch2
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v3.5.3
+    )
+    FetchContent_MakeAvailable(Catch2)
+
+    # Test executable that exercises core, GUI-free logic
+    juce_add_console_app(Pulse24Sync_tests PRODUCT_NAME "Pulse24Sync Tests")
+
+    target_sources(Pulse24Sync_tests
+        PRIVATE
+            tests/PulseGeneratorTests.cpp
+            Source/PulseGenerator.cpp
+    )
+
+    # Generate JuceHeader.h for tests as well
+    juce_generate_juce_header(Pulse24Sync_tests)
+
+    target_include_directories(Pulse24Sync_tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Source
+    )
+
+    target_compile_definitions(Pulse24Sync_tests
+        PUBLIC
+            JUCE_WEB_BROWSER=0
+            JUCE_USE_CURL=0
+            JUCE_VST3_CAN_REPLACE_VST2=0
+    )
+
+    target_link_libraries(Pulse24Sync_tests
+        PRIVATE
+            Catch2::Catch2WithMain
+            juce::juce_audio_basics
+            juce::juce_core
+            juce::juce_recommended_config_flags
+            juce::juce_recommended_warning_flags
+    )
+
+    include(Catch)
+    catch_discover_tests(Pulse24Sync_tests)
+endif()
