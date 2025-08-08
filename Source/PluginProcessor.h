@@ -1,7 +1,14 @@
 #pragma once
 
+// Pulse24SyncAudioProcessor
+// - Owns parameters via AudioProcessorValueTreeState (see Parameters.h for IDs)
+// - Bridges host state (tempo/transport) to the PulseGenerator engine
+// - Generates an audible 1kHz pulse train at 24 PPQN for sync testing
+// - UI binds directly to parameters; processBlock reads and applies every block
+
 #include <JuceHeader.h>
 #include "PulseGenerator.h"
+#include "Parameters.h"
 
 class Pulse24SyncAudioProcessor : public juce::AudioProcessor
 {
@@ -42,5 +49,6 @@ public:
     PulseGenerator pulseGenerator;
 
 private:
+    void syncParametersToEngine();
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Pulse24SyncAudioProcessor)
 };

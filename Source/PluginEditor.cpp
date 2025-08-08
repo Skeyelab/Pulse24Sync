@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "Parameters.h"
 
 Pulse24SyncAudioProcessorEditor::Pulse24SyncAudioProcessorEditor(Pulse24SyncAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
@@ -66,6 +67,13 @@ void Pulse24SyncAudioProcessorEditor::resized()
 
 void Pulse24SyncAudioProcessorEditor::setupUI()
 {
+    auto styleLabel = [](juce::Label& label, const juce::String& text, juce::Colour colour) {
+        label.setText(text, juce::dontSendNotification);
+        label.setFont(juce::Font(12.0f));
+        label.setColour(juce::Label::textColourId, colour);
+        label.setJustificationType(juce::Justification::centred);
+    };
+
     // Title label
     addAndMakeVisible(titleLabel);
     titleLabel.setText("Pulse24Sync", juce::dontSendNotification);
@@ -75,61 +83,49 @@ void Pulse24SyncAudioProcessorEditor::setupUI()
 
     // Status label
     addAndMakeVisible(statusLabel);
-    statusLabel.setText("Status: Ready", juce::dontSendNotification);
-    statusLabel.setFont(juce::Font(12.0f));
-    statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
-    statusLabel.setJustificationType(juce::Justification::centred);
+    styleLabel(statusLabel, "Status: Ready", juce::Colours::lightgreen);
 
     // Enabled button
     addAndMakeVisible(enabledButton);
     enabledButton.setButtonText("Enabled");
     enabledAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        audioProcessor.parameters, "enabled", enabledButton);
+        audioProcessor.parameters, PluginParams::enabled, enabledButton);
 
     // Velocity slider
     addAndMakeVisible(velocityLabel);
-    velocityLabel.setText("Pulse Velocity", juce::dontSendNotification);
-    velocityLabel.setFont(juce::Font(12.0f));
-    velocityLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    velocityLabel.setJustificationType(juce::Justification::centred);
+    styleLabel(velocityLabel, "Pulse Velocity", juce::Colours::white);
 
     addAndMakeVisible(velocitySlider);
     velocitySlider.setSliderStyle(juce::Slider::LinearHorizontal);
     velocitySlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
     velocityAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.parameters, "pulseVelocity", velocitySlider);
+        audioProcessor.parameters, PluginParams::pulseVelocity, velocitySlider);
 
     // Pulse width slider
     addAndMakeVisible(pulseWidthLabel);
-    pulseWidthLabel.setText("Pulse Width", juce::dontSendNotification);
-    pulseWidthLabel.setFont(juce::Font(12.0f));
-    pulseWidthLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    pulseWidthLabel.setJustificationType(juce::Justification::centred);
+    styleLabel(pulseWidthLabel, "Pulse Width", juce::Colours::white);
 
     addAndMakeVisible(pulseWidthSlider);
     pulseWidthSlider.setSliderStyle(juce::Slider::LinearHorizontal);
     pulseWidthSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
     pulseWidthAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.parameters, "pulseWidth", pulseWidthSlider);
+        audioProcessor.parameters, PluginParams::pulseWidth, pulseWidthSlider);
 
     // Sync to host button
     addAndMakeVisible(syncToHostButton);
     syncToHostButton.setButtonText("Sync to Host Tempo");
     syncToHostAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        audioProcessor.parameters, "syncToHost", syncToHostButton);
+        audioProcessor.parameters, PluginParams::syncToHost, syncToHostButton);
 
     // Manual BPM slider
     addAndMakeVisible(manualBPMLabel);
-    manualBPMLabel.setText("Manual BPM", juce::dontSendNotification);
-    manualBPMLabel.setFont(juce::Font(12.0f));
-    manualBPMLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    manualBPMLabel.setJustificationType(juce::Justification::centred);
+    styleLabel(manualBPMLabel, "Manual BPM", juce::Colours::white);
 
     addAndMakeVisible(manualBPMSlider);
     manualBPMSlider.setSliderStyle(juce::Slider::LinearHorizontal);
     manualBPMSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
     manualBPMAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.parameters, "manualBPM", manualBPMSlider);
+        audioProcessor.parameters, PluginParams::manualBPM, manualBPMSlider);
 }
 
 void Pulse24SyncAudioProcessorEditor::timerCallback()

@@ -179,7 +179,7 @@ float PulseGenerator::generatePulseSample(int sampleIndex)
     if (sampleIndex >= pulseDurationSamples)
         return 0.0f;
 
-    // Generate sine wave
+    // Generate sine wave at 1 kHz
     float phase = (2.0f * juce::MathConstants<float>::pi * PULSE_FREQUENCY * sampleIndex) / static_cast<float>(sampleRate);
     float sineWave = std::sin(phase);
 
