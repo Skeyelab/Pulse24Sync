@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 
+#define PULSE24SYNC_USE_JUCE 0
 #include "PulseGenerator.h"
 
 static juce::AudioBuffer<float> makeBuffer(int numChannels, int numSamples)

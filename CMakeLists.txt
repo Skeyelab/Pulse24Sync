@@ -13,20 +13,25 @@ endif()
 # Download and setup JUCE
 include(FetchContent)
 
+# Disable JUCE extras to avoid build issues with macOS 15.0 and Linux
+set(JUCE_BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
+set(JUCE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(JUCE_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+
+if (BUILD_PLUGIN)
 FetchContent_Declare(
     JUCE
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
     GIT_TAG 7.0.12
 )
 
-# Disable JUCE extras to avoid build issues with macOS 15.0 and Linux
-set(JUCE_BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
-set(JUCE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(JUCE_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
-
 FetchContent_MakeAvailable(JUCE)
+endif()
+
+option(BUILD_PLUGIN "Build the JUCE plugin targets" ON)
 
 # Create the VST plugin
+if (BUILD_PLUGIN)
 juce_add_plugin(Pulse24Sync
     COMPANY_NAME "Pulse24Sync"
     PLUGIN_NAME "Pulse24Sync"
@@ -45,27 +50,36 @@ juce_add_plugin(Pulse24Sync
     AU_MAIN_TYPE "kAudioUnitType_Effect"
     COPY_PLUGIN_AFTER_BUILD TRUE
 )
+endif()
 
 # Add source files
+if (BUILD_PLUGIN)
 target_sources(Pulse24Sync
     PRIVATE
         Source/PluginProcessor.cpp
         Source/PluginEditor.cpp
         Source/PulseGenerator.cpp
 )
+endif()
 
 # Add JUCE modules
+if (BUILD_PLUGIN)
 target_compile_definitions(Pulse24Sync
     PUBLIC
+        PULSE24SYNC_USE_JUCE=1
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_VST3_CAN_REPLACE_VST2=0
 )
+endif()
 
 # Generate JuceHeader.h
+if (BUILD_PLUGIN)
 juce_generate_juce_header(Pulse24Sync)
+endif()
 
 # Link JUCE modules
+if (BUILD_PLUGIN)
 target_link_libraries(Pulse24Sync
     PRIVATE
         juce::juce_audio_utils
@@ -85,9 +99,10 @@ target_link_libraries(Pulse24Sync
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
+endif()
 
 # Linux-specific configurations
-if(UNIX AND NOT APPLE)
+if(UNIX AND NOT APPLE AND BUILD_PLUGIN)
     find_package(PkgConfig REQUIRED)
 
     # Find audio systems
@@ -144,7 +159,7 @@ if (BUILD_TESTING)
     FetchContent_MakeAvailable(Catch2)
 
     # Test executable that exercises core, GUI-free logic
-    juce_add_console_app(Pulse24Sync_tests PRODUCT_NAME "Pulse24Sync Tests")
+    add_executable(Pulse24Sync_tests)
 
     target_sources(Pulse24Sync_tests
         PRIVATE
@@ -152,15 +167,14 @@ if (BUILD_TESTING)
             Source/PulseGenerator.cpp
     )
 
-    # Generate JuceHeader.h for tests as well
-    juce_generate_juce_header(Pulse24Sync_tests)
-
     target_include_directories(Pulse24Sync_tests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/Source
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
     )
 
     target_compile_definitions(Pulse24Sync_tests
         PUBLIC
+            PULSE24SYNC_USE_JUCE=0
             JUCE_WEB_BROWSER=0
             JUCE_USE_CURL=0
             JUCE_VST3_CAN_REPLACE_VST2=0
@@ -169,10 +183,6 @@ if (BUILD_TESTING)
     target_link_libraries(Pulse24Sync_tests
         PRIVATE
             Catch2::Catch2WithMain
-            juce::juce_audio_basics
-            juce::juce_core
-            juce::juce_recommended_config_flags
-            juce::juce_recommended_warning_flags
     )
 
     include(Catch)
