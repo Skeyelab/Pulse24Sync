@@ -23,8 +23,8 @@ Despite the build issues, we have successfully created a complete VST plugin pro
    - 24 pulses per quarter note generation
    - Real-time tempo synchronization with DAW
    - Manual BPM mode (60-200 BPM)
-   - Configurable MIDI velocity (0-127)
-   - MIDI channel selection (1-16)
+   - Configurable pulse velocity (0-127)
+   
    - Enable/disable functionality
    - Modern UI with status display
 
@@ -43,7 +43,7 @@ Despite the build issues, we have successfully created a complete VST plugin pro
 4. Build using Xcode/Visual Studio
 
 ### Option 2: Use JUCE 7.1+ (When Available)
-- JUCE 7.1+ should have better macOS 15 compatibility
+- JUCE 7.1+ may have better macOS 15 compatibility (project currently pins 7.0.12 in `CMakeLists.txt`)
 - Update the GIT_TAG in CMakeLists.txt when available
 
 ### Option 3: Use JUCE 6.1.6 with macOS 14
@@ -75,12 +75,12 @@ Pulse24Sync/
 
 ## Core Functionality
 
-The plugin generates exactly 24 MIDI pulses per quarter note with:
+The plugin generates exactly 24 audio pulses per quarter note with:
 
 - **Tempo Sync**: Automatically follows DAW tempo changes
 - **Manual Mode**: Set custom BPM when not syncing
 - **Precise Timing**: Sample-accurate pulse generation
-- **MIDI Output**: Generates MIDI note events on configurable channel
+- **Audio Output**: Generates 1kHz sine wave pulses
 - **Real-time UI**: Shows current BPM, sync status, and pulse rate
 
 ## Next Steps

@@ -73,8 +73,8 @@ This script will:
 
 4. **Build the VST3 Plugin**
    - Right-click on **Pulse24Sync_VST3** in Solution Explorer
-   - Select **Build**
-   - The VST3 plugin will be built to: `Builds/VisualStudio2022/build/Release/Pulse24Sync.vst3`
+- Select **Build**
+- The VST3 plugin will be built to: `Builds/VisualStudio2022/x64/Release/VST3/Pulse24Sync.vst3`
 
 #### Method 3: Using Command Line
 
@@ -113,7 +113,7 @@ This script will:
 
 The standalone version will be built to:
 ```
-Builds/VisualStudio2022/build/Release/Pulse24Sync.exe
+Builds/VisualStudio2022/x64/Release/Standalone Plugin/Pulse24Sync.exe
 ```
 
 ## ☁️ Cloud Build Options

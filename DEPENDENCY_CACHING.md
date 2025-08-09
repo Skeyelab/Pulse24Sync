@@ -65,9 +65,8 @@ The following packages are cached to avoid repeated downloads:
 ## Implementation
 
 ### Build Workflow (`.github/workflows/build.yml`)
-- ✅ Caches APT packages before dependency installation
-- ✅ Automatically restores cached packages on subsequent runs
-- ✅ Smart cache invalidation based on dependency script changes
+- Currently does not cache APT packages by default
+- Optionally, add the same caching step as the release workflow if needed
 
 ### Release Workflow (`.github/workflows/release.yml`)  
 - ✅ Same caching strategy with Linux OS condition

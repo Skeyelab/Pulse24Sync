@@ -4,14 +4,14 @@ Thank you for downloading Pulse24Sync! This guide will help you install the plug
 
 ## About Pulse24Sync
 
-Pulse24Sync is a VST3 plugin that generates precisely 24 MIDI pulses per quarter note, with real-time tempo synchronization to your DAW. It's perfect for syncing external MIDI devices or creating clock signals for other equipment.
+Pulse24Sync is an audio plugin that generates precisely 24 audio pulses per quarter note, with real-time tempo synchronization to your DAW. It's ideal for timing/tempo sync testing and clocking other audio-driven gear.
 
 ## System Requirements
 
 - **macOS**: 10.15 (Catalina) or higher
 - **Windows**: Windows 10/11 (64-bit)
 - **Linux**: Ubuntu 20.04+ or equivalent distribution
-- **DAW**: Any VST3-compatible DAW (Logic Pro, Pro Tools, Cubase, Reaper, FL Studio, etc.)
+- **DAW**: Any VST3-compatible DAW (e.g., Ableton Live, Cubase, Reaper, Bitwig, FL Studio, Studio One). On macOS, an AU build is also provided for Logic Pro and GarageBand.
 
 ## Installation Instructions
 
@@ -148,10 +148,10 @@ If you prefer to build from source, see the build instructions in the main READM
 3. **Choose sync mode**:
    - **Sync to Host**: Automatically follows your DAW's tempo (recommended)
    - **Manual Mode**: Set your own BPM using the Manual BPM slider
-4. **Configure MIDI settings**:
-   - Set the MIDI velocity for pulses (default: 100)
-   - Choose the MIDI channel (default: 1)
-5. **Start playback** - the plugin generates 24 MIDI pulses per quarter note
+4. **Configure audio settings**:
+   - Set pulse velocity (0–127) and pulse width (1–50 ms)
+
+5. **Start playback** - the plugin generates 24 audio pulses per quarter note
 
 ## Troubleshooting
 
@@ -172,11 +172,11 @@ If you prefer to build from source, see the build instructions in the main READM
 - Check your DAW's plugin blacklist
 - Restart your DAW completely
 
-### Audio/MIDI Issues
+### Audio Issues
 
 - Ensure your DAW is sending tempo information to the plugin
-- Check that the plugin is on a MIDI track or sending MIDI to the right destination
-- Verify MIDI channel settings match your receiving device/track
+- Ensure the plugin is inserted on an audio-capable track or as an effect
+
 
 ### Performance Issues
 
@@ -191,7 +191,7 @@ If you prefer to build from source, see the build instructions in the main READM
 
 ## License
 
-This software is open source. See the LICENSE file in the repository for details.
+This software is open source. See the README for licensing details.
 
 ---
 

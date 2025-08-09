@@ -15,7 +15,7 @@ This document explains the core structure of the plugin, parameters, and engine 
 - `Source/PluginEditor.*`: JUCE editor.
   - Binds controls to APVTS parameters via attachments.
   - Displays status text (enabled, mode, BPM, pulse rate) via a timer.
-- `Source/PulseGenerator.*`: Engine that renders pulses.
+- `Source/PulseGenerator.*`: Engine that renders audible pulses.
   - Maintains timing state (sample rate, next-pulse scheduling).
   - Supports host-sync using BPM and PPQ position for robust re-sync.
 - `Source/Parameters.h`: Centralizes parameter IDs and human names.
