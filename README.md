@@ -72,6 +72,15 @@ When building from source, the plugin will be automatically copied to the approp
 
 This project includes an automated release system that builds macOS, Windows, and Linux versions and creates a GitHub release with all plugin formats.
 
+### Code Signing and Notarization
+
+The build system automatically code signs and notarizes macOS plugins to eliminate security warnings. For setup instructions:
+
+- **General setup**: See [MACOS_CODE_SIGNING_GUIDE.md](MACOS_CODE_SIGNING_GUIDE.md)
+- **GitHub Actions setup**: See [GITHUB_ACTIONS_CODESIGNING.md](GITHUB_ACTIONS_CODESIGNING.md)
+- **Self-hosted runners**: See [SELF_HOSTED_RUNNER_SETUP.md](SELF_HOSTED_RUNNER_SETUP.md)
+- **Notarization setup**: See [NOTARIZATION_SETUP.md](NOTARIZATION_SETUP.md)
+
 #### To create a release:
 
 1. **Make sure all changes are committed**:
