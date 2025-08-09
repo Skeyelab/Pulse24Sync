@@ -6,7 +6,13 @@
 // - Manual BPM mode when not synced to host
 // - Pulse width expressed in ms; converted to samples per current sample rate
 
-#include <JuceHeader.h>
+#if PULSE24SYNC_USE_JUCE
+#include <juce_core/juce_core.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#else
+#include "JuceStubs.h"
+#endif
+#include <cmath>
 
 class PulseGenerator
 {
