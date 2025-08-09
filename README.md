@@ -7,7 +7,7 @@ A JUCE-based audio plugin that generates a 24 PPQN pulse train for tempo sync te
 ## Features
 - 24 PPQN pulse generation, audible 1 kHz tone per pulse
 - Host tempo sync with resilient re-sync on transport jumps
-- Manual BPM mode when host sync disabled
+- Manual BPM mode when host sync is disabled
 - Adjustable pulse width (1–50 ms) and velocity (0–127)
 
 ## Dev Docs
@@ -70,7 +70,7 @@ When building from source, the plugin will be automatically copied to the approp
 
 ### Automatic Release Creation
 
-This project includes an automated release system that builds both macOS and Windows versions and creates a GitHub release with all plugin formats.
+This project includes an automated release system that builds macOS, Windows, and Linux versions and creates a GitHub release with all plugin formats.
 
 #### To create a release:
 
@@ -86,7 +86,7 @@ This project includes an automated release system that builds both macOS and Win
    ./create-release.sh
    ```
 
-3. **Follow the prompts** to enter the version number (e.g., `1.0.0`, `1.2.3-beta.1`)
+3. **Follow the prompts** to enter the version number (e.g., `1.0.0`, `1.2.3-beta.1`). The release pipeline packages macOS (VST3/AU/Standalone), Windows (VST3/Standalone), and Linux (VST3/Standalone).
 
 4. **The script will**:
    - Create a git tag (e.g., `v1.0.0`)
@@ -97,7 +97,7 @@ This project includes an automated release system that builds both macOS and Win
 
 - **macOS**: VST3, Audio Unit (.component), and Standalone (.app)
 - **Windows**: VST3 and Standalone (.exe)
-- **Linux**: VST3 and Standalone
+- **Linux**: VST3 and Standalone (included in release packages)
 
 #### Release workflow:
 
@@ -131,9 +131,9 @@ If you prefer to create releases manually:
 
 - **Sample Rate**: Supports all common sample rates (44.1kHz, 48kHz, 96kHz, etc.)
 - **Buffer Size**: Works with any buffer size
-- **Tempo Range**: 60-200 BPM (manual mode)
-- **Audio Output**: Generates 1kHz sine wave pulses as audio output
-- **Pulse Duration**: Approximately 22ms per pulse
+- **Tempo Range**: 60–200 BPM (manual mode)
+- **Audio Output**: Generates 1 kHz sine wave pulses (no MIDI output)
+- **Pulse Width**: Adjustable 1–50 ms (default ~22 ms)
 - **Precision**: High-precision timing using sample-accurate calculations
 
 ## Troubleshooting

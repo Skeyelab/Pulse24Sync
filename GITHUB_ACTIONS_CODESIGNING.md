@@ -39,12 +39,9 @@ Previously, your macOS apps were codesigned when built locally but not when buil
      DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
    ```
 
-### Option 2: Auto-Detection (Current Setup)
+### Option 2: Auto-Detection (Fallback)
 
-The current workflow will automatically detect available certificates on the GitHub Actions runner. However, this depends on:
-
-1. **Runner having certificates installed**: Most GitHub Actions macOS runners don't have Developer ID certificates pre-installed
-2. **Certificate availability**: The runner needs access to your private key
+Workflows include a fallback that attempts to detect available certificates on the GitHub Actions runner. In practice, you should install your certificate via secrets as most runners will not have Developer ID certs or private keys pre-installed.
 
 ## 🔧 Manual Certificate Installation on Runner
 

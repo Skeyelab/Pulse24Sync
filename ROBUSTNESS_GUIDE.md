@@ -20,33 +20,29 @@ This guide explains the improvements made to make Pulse24Sync more stable, relia
 - ✅ Stays perfectly aligned with the DAW's timing
 - ✅ Handles tempo automation smoothly
 
-### 2. **Parameter Validation & Smoothing**
+### 2. **Parameter Validation**
 
 **Problem**: Extreme parameter values could cause audio artifacts or crashes.
 
 **Solution**:
-- **Bounds checking**: All parameters are validated within safe ranges
-- **Parameter smoothing**: Volume and width changes are smoothed over 50ms
-- **Error recovery**: Plugin gracefully handles invalid parameters
+- **Bounds checking**: Parameters are validated within safe ranges in setters
+- **Velocity mapping**: MIDI-like velocity (0–127) mapped to gain [0..1]
 
 **Parameter Ranges**:
-- **Tempo**: 20-300 BPM (with automatic clamping)
-- **Volume**: 0.0-1.0 (with smoothing)
-- **Pulse Width**: 0.1%-90% (with validation)
-- **Sample Rate**: 8kHz-192kHz (with bounds checking)
+- **Tempo**: 60–200 BPM (manual mode)
+- **Pulse Velocity**: 0–127 (mapped internally to 0.0–1.0)
+- **Pulse Width**: 1–50 ms
 
 **Benefits**:
-- ✅ No audio clicks or pops when changing parameters
-- ✅ Plugin never crashes from invalid values
-- ✅ Smooth, professional parameter changes
+- ✅ Safe, predictable parameter behavior
+- ✅ Avoids invalid values
 
 ### 3. **Audio Quality Improvements**
 
 **Problem**: Square wave pulses can cause aliasing and harsh audio artifacts.
 
 **Solution**:
-- **Anti-aliasing filtering**: Smooths pulse edges to reduce high-frequency artifacts
-- **Pulse shaping**: Applies gentle curves instead of hard square waves
+- **Pulse shaping**: Applies a short attack and exponential decay to reduce harsh edges
 - **Oversampling-friendly**: Designed to work well with high sample rates
 
 **Benefits**:
@@ -66,7 +62,7 @@ This guide explains the improvements made to make Pulse24Sync more stable, relia
 
 **Error Handling**:
 - **Invalid tempo**: Clamps to safe range (20-300 BPM)
-- **Invalid sample rate**: Clamps to safe range (8kHz-192kHz)
+- **Invalid sample rate**: Uses current host sample rate; recalculates on change
 - **Timing errors**: Resets timing after 10 consecutive errors
 - **Parameter errors**: Validates and clamps all parameters
 
@@ -98,12 +94,7 @@ double samplePpq = currentPpq + (sample / sampleRate) * (currentTempo / 60.0);
 double pulsePpq = 1.0 / 24.0; // One pulse per 24th of a quarter note
 ```
 
-### **Parameter Smoothing**
-```cpp
-// 50ms smoothing for parameter changes
-smoothedVolume.reset(sampleRate, 0.05);
-smoothedVolume.setTargetValue(newVolume);
-```
+
 
 ### **Error Recovery**
 ```cpp
@@ -192,6 +183,6 @@ float pulseValue = shapePulse(phase, width) * smoothedVolume.getNextValue();
 - **Modular design**: Easy to add new features
 - **Clean interfaces**: Well-defined public APIs
 - **JUCE best practices**: Follows framework guidelines
-- **Cross-platform**: Works on macOS and Windows
+- **Cross-platform**: Works on macOS, Windows, and Linux
 
 This robust implementation ensures Pulse24Sync is production-ready and suitable for professional use in any environment.

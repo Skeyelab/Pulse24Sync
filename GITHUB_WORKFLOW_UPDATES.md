@@ -22,6 +22,7 @@ This document summarizes the changes made to enable Linux builds in the GitHub C
 - Uses the existing `build.sh` script
 - Includes dependency verification step
 - Validates build outputs
+- Runs unit tests via Catch2/CTest
 
 #### Key Changes:
 ```yaml
@@ -48,7 +49,7 @@ build-linux:
 #### After:
 - Added `ubuntu-24.04` to build matrix
 - Includes Linux dependency installation
-- Linux build and validation steps
+- Linux build, test, and validation steps
 - Proper artifact paths for Linux builds
 
 #### Key Changes:
@@ -96,9 +97,9 @@ The workflows now install all required Linux development libraries:
 ## Caching Implementation
 
 ### Dependency Caching
-- **APT Package Cache**: Downloaded `.deb` files cached to avoid re-downloads
+- **APT Package Cache (Release workflow)**: Downloaded `.deb` files cached to avoid re-downloads
 - **Cache Key**: Based on `install-linux-deps.sh` content hash
-- **Performance**: 50-90% faster dependency installation
+- **Performance**: 50-90% faster dependency installation on release builds
 - **Smart Invalidation**: Cache updates only when dependencies change
 
 ## Build Artifacts

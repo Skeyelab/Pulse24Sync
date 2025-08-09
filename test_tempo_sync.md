@@ -11,7 +11,7 @@ To verify that the tempo synchronization fix is working correctly, follow these 
 
 ### 2. Enable Host Sync
 - In the plugin UI, ensure "Sync to Host Tempo" is enabled (should be enabled by default)
-- The status should show "Host Sync - [current BPM] BPM"
+- The status should show "Host Sync - [current BPM] BPM | Rate: [Hz]"
 
 ### 3. Test Tempo Changes
 1. **Initial Tempo Test**:

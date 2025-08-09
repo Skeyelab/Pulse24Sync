@@ -16,18 +16,17 @@ This document outlines the comprehensive cleanup improvements made to prevent bu
 ## 📁 Updated Files
 
 ### Build Scripts Enhanced
-- `build-docker.sh` - Added Docker resource cleanup with error handling
-- `build-docker-debug.sh` - Added cleanup for containers, images, and temporary Dockerfiles
-- `build.sh` - Added temporary file cleanup and CMake cache management
-- `build_macos.sh` - Added macOS-specific cleanup (Xcode files, .DS_Store)
-- `build_windows.bat` - Added Windows-specific cleanup (temp files, VS artifacts)
+- `build.sh` - Temporary file cleanup and CMake cache management
+- `build_macos.sh` - macOS-specific cleanup (Xcode files, .DS_Store)
+- `build_windows.bat` - Windows-specific cleanup (temp files, VS artifacts)
+- `cleanup-build.sh` - Comprehensive cleanup utility
 
 ### CI/CD Workflows Enhanced
 - `.github/workflows/build.yml` - Added cleanup steps for all platforms
 - `.github/workflows/release.yml` - Added cleanup for release builds
 
-### Docker Optimization
-- `Dockerfile` - Converted to multi-stage build for better layer management
+### Optional Docker Cleanup
+- If Docker is installed locally, `cleanup-build.sh` can remove project-related containers/images. The project does not include a Dockerfile.
 
 ### New Utilities
 - `cleanup-build.sh` - Comprehensive cleanup script for manual use
@@ -143,7 +142,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 ```
 
-## 🏗 Multi-Stage Docker Benefits
+## 🏗 Optional Docker Best Practices (if you add Docker)
 
 ### Before (Single Stage)
 ```dockerfile
@@ -208,7 +207,7 @@ du -h --max-depth=1 . | sort -hr
 docker system df
 
 # Build with automatic cleanup
-./build-docker.sh
+./build.sh
 
 # Check remaining artifacts
 find . -name "*.tmp" -o -name "*.build" -o -name ".DS_Store"
